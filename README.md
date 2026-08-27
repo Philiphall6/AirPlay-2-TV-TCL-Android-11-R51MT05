@@ -17,6 +17,8 @@ Fonctionnalités déjà intégrées :
 
 - deux récepteurs mDNS séparés : **TCL G03 Audio** et **TCL G03 Video** par défaut ;
 - interface sombre inspirée d’Apple TV avec symbole AirPlay et navigation adaptée à la télécommande ;
+- écran audio optionnel avec pochette, titre, artiste, album, progression et commandes lecture/pause/précédent/suivant via DACP ;
+- retour automatique au menu standard lorsque cet affichage est désactivé ou que la session se termine ;
 - nom de base personnalisable, mémorisé localement, avec suffixes fixes **Audio** et **Video** ;
 - réception audio PCM, AAC, AAC-ELD et ALAC ;
 - bibliothèques natives ARMv7 `libfdk-aac.so` et `libalac.so` ;
@@ -71,13 +73,13 @@ Elle contient :
 
 - le lanceur et l’intégration TV TCL ;
 - le lecteur SteeBono adapté à Android ;
-- l’application Android **10.0** (`versionCode 24`) avec la nouvelle interface ;
+- l’application Android **10.0** (`versionCode 25`) avec la nouvelle interface audio optionnelle ;
 - la redirection de l’entrée système **AirPlay** du menu TCL vers l’application,
   sans modifier le chemin `TVInputService` utilisé pendant la projection vidéo ;
 - le maintien du paquet TCL `com.tcl.airplay2` et de son récepteur comme
-  déclencheur de la tuile, la désactivation de son seul `BootupService` qui
-  génère l’erreur **904**, puis l’ouverture directe de la v10 par le pont root
-  lorsqu’il observe l’action `Show.Home.AirplayAPK` ;
+  déclencheur de la tuile ; le pont root intercepte `Show.Home.AirplayAPK`,
+  arrête le processus hérité avant l’erreur **904**, puis ouvre directement la
+  v10, tout en gardant `BootupService` disponible pour la bascule vidéo ;
 - le nom de récepteur personnalisable et ses suffixes fixes **Audio** et **Video** ;
 - les bibliothèques natives ARMv7 AAC et ALAC ;
 - le service de démarrage Magisk ;
@@ -87,7 +89,7 @@ Elle contient :
 SHA-256 de l’archive validée :
 
 ```text
-a6cbfae2fea9c7a57227ce529446031c94944ef2311cfb6e7b107c29e4b16f01
+a30ceca381390629a5aba8909c026dc0c712fae487587f5b1c41a6d4df906c91
 ```
 
 Voir [docs/RELEASE_V10.0.md](docs/RELEASE_V10.0.md) pour les détails de cette version.

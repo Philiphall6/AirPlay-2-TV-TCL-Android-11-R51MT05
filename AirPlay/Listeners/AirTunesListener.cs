@@ -67,6 +67,16 @@ namespace AirPlay.Listeners
                         ? request.Headers["Client-Instance"]
                         : $"port-{_airTunesPort}";
             var session = await SessionManager.Current.GetSessionAsync(sessionId);
+            var activeRemote = request.Headers.ContainsKey("Active-Remote")
+                ? request.Headers["Active-Remote"]
+                : string.Empty;
+            var dacpId = request.Headers.ContainsKey("DACP-ID")
+                ? request.Headers["DACP-ID"]
+                : string.Empty;
+            if (!string.IsNullOrWhiteSpace(activeRemote) || !string.IsNullOrWhiteSpace(dacpId))
+            {
+                _receiver.OnRemoteControl(activeRemote, dacpId);
+            }
 
             if (request.Type == RequestType.GET && "/info".Equals(request.Path, StringComparison.OrdinalIgnoreCase))
             {
@@ -483,6 +493,7 @@ namespace AirPlay.Listeners
             }
             if (request.Type == RequestType.RECORD)
             {
+                _receiver.OnPlaybackState(true);
                 response.Headers.Add("Audio-Latency", "0"); // 11025
                 // response.Headers.Add("Audio-Jack-Status", "connected; type=analog");
             }
@@ -495,11 +506,15 @@ namespace AirPlay.Listeners
                     if (contentType.Equals("text/parameters", StringComparison.OrdinalIgnoreCase))
                     {
                         var body = Encoding.ASCII.GetString(request.Body);
-                        var keyPair = body.Split(":", StringSplitOptions.RemoveEmptyEntries).Select(b => b.Trim(' ', '\r', '\n')).ToArray();
-                        if(keyPair.Length == 2)
+                        foreach (var line in body.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries))
                         {
-                            var key = keyPair[0];
-                            var val = keyPair[1];
+                            var separator = line.IndexOf(':');
+                            if (separator <= 0)
+                            {
+                                continue;
+                            }
+                            var key = line.Substring(0, separator).Trim();
+                            var val = line.Substring(separator + 1).Trim();
 
                             if (key.Equals("volume", StringComparison.OrdinalIgnoreCase))
                             {
@@ -514,26 +529,30 @@ namespace AirPlay.Listeners
                                 var current = long.Parse(pVals[1]);
                                 var end = long.Parse(pVals[2]);
 
-                                // DO SOMETHING W/ PROGRESS
+                                _receiver.OnProgress(start, current, end);
                             }
                         }
                     }
-                    else if (contentType.Equals("image/jpeg", StringComparison.OrdinalIgnoreCase))
+                    else if (contentType.Equals("image/jpeg", StringComparison.OrdinalIgnoreCase) ||
+                        contentType.Equals("image/png", StringComparison.OrdinalIgnoreCase))
                     {
-                        var image = request.Body;
-
-                        // DO SOMETHING W/ IMAGE
+                        _receiver.OnArtwork(request.Body);
                     }
                     else if (contentType.Equals("application/x-dmap-tagged", StringComparison.OrdinalIgnoreCase))
                     {
                         var dmap = new DMapTagged();
                         var output = dmap.Decode(request.Body);
+                        _receiver.OnMetadata(output);
                     }
                 }
             }
             if(request.Type == RequestType.OPTIONS)
             {
                 response.Headers.Add("Public", "SETUP, RECORD, PAUSE, FLUSH, TEARDOWN, OPTIONS, GET_PARAMETER, SET_PARAMETER, ANNOUNCE");
+            }
+            if (request.Type == RequestType.PAUSE)
+            {
+                _receiver.OnPlaybackState(false);
             }
             if(request.Type == RequestType.ANNOUNCE)
             {
@@ -597,6 +616,15 @@ namespace AirPlay.Listeners
                                 session.AudioControlListener = null;
                             }
                             session.AudioFormat = AudioFormat.Unknown;
+                            _receiver.OnArtwork(null);
+                            _receiver.OnMetadata(new Dictionary<string, object>
+                            {
+                                ["minm"] = string.Empty,
+                                ["asar"] = string.Empty,
+                                ["asal"] = string.Empty
+                            });
+                            _receiver.OnProgress(0, 0, 0);
+                            _receiver.OnPlaybackState(false);
                             _receiver.OnDiagnostic("Session audio libérée après TEARDOWN");
                         }
                     }

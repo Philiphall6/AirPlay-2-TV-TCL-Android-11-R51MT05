@@ -85,7 +85,9 @@ internal sealed class H264SurfaceSink : IDisposable
             return;
         }
 
-        var inputIndex = _codec.DequeueInputBuffer(0);
+        // Realtek's decoder frequently needs a few milliseconds to recycle an
+        // input buffer. A zero timeout dropped most frames on the R51MT05.
+        var inputIndex = _codec.DequeueInputBuffer(10000);
         if (inputIndex >= 0)
         {
             var input = _codec.GetInputBuffer(inputIndex);

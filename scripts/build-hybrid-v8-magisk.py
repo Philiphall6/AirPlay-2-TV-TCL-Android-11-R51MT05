@@ -144,7 +144,7 @@ esac
 settings put secure accessibility_enabled 1
 pm enable --user 0 com.tcl.airplay2 >/dev/null 2>&1
 pm enable com.tcl.airplay2/com.mediatek.partner.airplay.BootupReceiver >/dev/null 2>&1
-pm disable com.tcl.airplay2/com.mediatek.partner.airplay.BootupService >/dev/null 2>&1
+pm enable com.tcl.airplay2/com.mediatek.partner.airplay.BootupService >/dev/null 2>&1
 "$MODDIR/tcl-system-tile-bridge.sh" >/dev/null 2>&1 &
 am start --user 0 -n com.philphall.tclairplayreceiver/com.philphall.tclairplayreceiver.BootstrapActivity >/dev/null 2>&1
 """
@@ -179,17 +179,18 @@ Replacement engine:
 Current receiver features:
 - configurable receiver base name with fixed Audio and Video destinations
 - Apple TV-inspired interface, AirPlay symbol and custom Android application icon
+- optional audio screen with artwork, metadata, progress and DACP media controls
 - PCM, AAC/AAC-ELD and ALAC audio through Android AudioTrack
 - H.264 mirroring through the Realtek hardware MediaCodec decoder
 - exact mirroring TCP framing, multi-NAL access units and IDR/SPS/PPS recovery
 - direct TCL TVInputService Surface bridge with centered portrait/landscape ratio
 - TCL system AirPlay source opens the v10 application outside video sessions
 - the original TCL receiver remains enabled as the system tile trigger
-- only the legacy BootupService is disabled to prevent the error 904 dialog
-- the root log bridge recognizes Show.Home.AirplayAPK and opens v10 directly
+- the root bridge stops only the legacy tile process before error 904 appears
+- BootupService stays available for video source switching through Start.LunaTest
 - an accessibility bridge remains available as a fallback
 - delayed aspect transform so the Realtek decoder starts on a full-size buffer
-- one-shot TCL source switching per session to keep the direct player visible
+- retried TCL source switching when the TVInput Surface is absent
 - no persistent media recording or H.264/audio dump
 
 Not included:

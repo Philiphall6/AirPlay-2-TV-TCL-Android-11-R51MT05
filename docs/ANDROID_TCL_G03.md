@@ -25,11 +25,15 @@ Upstream baseline:
 
 - Apple TV-inspired dark interface with an AirPlay symbol and TV-remote focus states;
 - locally persisted receiver base name with non-editable `Audio` and `Video` suffixes;
+- optional now-playing screen with artwork, UTF-8 metadata, progress and DACP
+  play/pause/previous/next commands, while preserving the standard menu when disabled;
 - foreground service with a persistent notification;
 - boot receiver;
 - Wi-Fi multicast lock for `_airplay._tcp` and `_raop._tcp` advertisements;
 - `AudioTrack` PCM sink at 44.1 kHz, stereo, 16-bit;
 - `MediaCodec` H.264 decoder targeting a `SurfaceView`;
+- corrected mirroring packet reads, multi-NAL conversion, SPS/PPS parsing and
+  non-zero Realtek input-buffer wait;
 - Android-safe native-library loading through `NativeLibrary`;
 - deterministic target identity, control ports 5000/7000 and H.264 data port
   7100;
@@ -253,7 +257,7 @@ finished production release.
 
 ## Version 10.0
 
-The v10.0 Android application (`versionCode=24`) adds the new dark TV interface,
+The v10.0 Android application (`versionCode=25`) adds the new dark TV interface,
 the AirPlay symbol, remote-focus states and a locally persisted receiver base
 name. The advertised names always retain the fixed `Audio` and `Video` suffixes.
 Saving the name restarts the foreground receiver so the new mDNS records are
@@ -267,13 +271,14 @@ The TCL system AirPlay source now routes manual selections to the stable v10
 continue through the retained MediaTek `TVInputService`, avoiding the TCL 904
 error without replacing the direct video Surface path.
 
-The corresponding Magisk module is v10.0 (`versionCode=36`). The boot service
+The corresponding Magisk module is v10.0 (`versionCode=38`). The boot service
 enables `TclAirPlayTileAccessibilityService` while preserving existing enabled
 accessibility services. The `com.tcl.airplay2` package and its `BootupReceiver`
-remain enabled because the TCL tile needs both. Only its legacy `BootupService`,
-which creates the error 904 dialog, is disabled. The accessibility bridge
-remains available as a fallback, while the Magisk root bridge watches the exact
-`Show.Home.AirplayAPK` receiver event and opens v10 directly. Screen-mirroring
+remain enabled because the TCL tile needs both. `BootupService` also remains
+enabled for video source switching. The root bridge stops the legacy process
+before its error 904 dialog, while the accessibility bridge remains available
+as a fallback. It watches the exact `Show.Home.AirplayAPK` receiver event and
+opens v10 directly. Screen-mirroring
 rendering still needs a complete physical regression test. Module activation,
 foreground-service restart and control ports 5000/7000 were verified after a
 full television reboot.

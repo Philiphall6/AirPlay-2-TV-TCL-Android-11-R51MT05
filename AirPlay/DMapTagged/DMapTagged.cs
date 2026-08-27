@@ -1020,13 +1020,21 @@ namespace AirPlay.DmapTagged
             var mem = new MemoryStream(buffer);
             using (var reader = new BinaryReader(mem))
             {
-                for (int i = 8; i < buffer.Length;)
+                for (int i = 8; i + 8 <= buffer.Length;)
                 {
                     mem.Position = i;
                     var outputKey = Encoding.ASCII.GetString(reader.ReadBytes(4));
 
                     var itemLength = reader.ReadUInt32BE();
-                    var contentType = _contentTypes[outputKey];
+                    if (itemLength > int.MaxValue || i + 8L + itemLength > buffer.Length)
+                    {
+                        break;
+                    }
+                    if (!_contentTypes.TryGetValue(outputKey, out var contentType))
+                    {
+                        i += (int)(8 + itemLength);
+                        continue;
+                    }
 
                     object parsedData = null;
                     if (itemLength != 0)
@@ -1058,7 +1066,7 @@ namespace AirPlay.DmapTagged
                             }
                             else
                             {
-                                parsedData = Encoding.ASCII.GetString(data);
+                                parsedData = Encoding.UTF8.GetString(data);
                             }
                         }
 

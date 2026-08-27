@@ -18,6 +18,7 @@ namespace AirPlay
         public event EventHandler<decimal> OnSetVolumeReceived;
         public event EventHandler<H264Data> OnH264DataReceived;
         public event EventHandler<PcmData> OnPCMDataReceived;
+        public event EventHandler<NowPlayingInfo> OnNowPlayingChanged;
         public event EventHandler<string> OnDiagnosticReceived;
 
         public const string AirPlayType = "_airplay._tcp";
@@ -36,6 +37,8 @@ namespace AirPlay
         private readonly ushort _airPlayDataPort;
         private readonly string _deviceId;
         private readonly string _audioDeviceId;
+        private readonly object _nowPlayingGate = new object();
+        private readonly NowPlayingInfo _nowPlaying = new NowPlayingInfo();
 
         public AirPlayReceiver(IOptions<AirPlayReceiverConfig> aprConfig, IOptions<CodecLibrariesConfig> codecConfig, IOptions<DumpConfig> dumpConfig)
         {
@@ -200,11 +203,96 @@ namespace AirPlay
         public void OnPCMData(PcmData data)
         {
             OnPCMDataReceived?.Invoke(this, data);
+            lock (_nowPlayingGate)
+            {
+                if (!_nowPlaying.IsPlaying)
+                {
+                    _nowPlaying.IsPlaying = true;
+                    PublishNowPlaying();
+                }
+            }
+        }
+
+        public void OnMetadata(IDictionary<string, object> metadata)
+        {
+            if (metadata == null)
+            {
+                return;
+            }
+            lock (_nowPlayingGate)
+            {
+                _nowPlaying.Title = ReadMetadata(metadata, "minm", "dmap.itemname", _nowPlaying.Title);
+                _nowPlaying.Artist = ReadMetadata(metadata, "asar", "daap.songartist", _nowPlaying.Artist);
+                _nowPlaying.Album = ReadMetadata(metadata, "asal", "daap.songalbum", _nowPlaying.Album);
+                PublishNowPlaying();
+            }
+        }
+
+        public void OnArtwork(byte[] artwork)
+        {
+            lock (_nowPlayingGate)
+            {
+                _nowPlaying.Artwork = artwork == null ? null : (byte[])artwork.Clone();
+                PublishNowPlaying();
+            }
+        }
+
+        public void OnProgress(long start, long current, long end)
+        {
+            lock (_nowPlayingGate)
+            {
+                _nowPlaying.ProgressStart = start;
+                _nowPlaying.ProgressCurrent = current;
+                _nowPlaying.ProgressEnd = end;
+                PublishNowPlaying();
+            }
+        }
+
+        public void OnPlaybackState(bool isPlaying)
+        {
+            lock (_nowPlayingGate)
+            {
+                _nowPlaying.IsPlaying = isPlaying;
+                PublishNowPlaying();
+            }
+        }
+
+        public void OnRemoteControl(string activeRemote, string dacpId)
+        {
+            lock (_nowPlayingGate)
+            {
+                var changed = _nowPlaying.ActiveRemote != (activeRemote ?? string.Empty) ||
+                    _nowPlaying.DacpId != (dacpId ?? string.Empty);
+                _nowPlaying.ActiveRemote = activeRemote ?? string.Empty;
+                _nowPlaying.DacpId = dacpId ?? string.Empty;
+                if (changed)
+                {
+                    PublishNowPlaying();
+                }
+            }
         }
 
         public void OnDiagnostic(string message)
         {
             OnDiagnosticReceived?.Invoke(this, message);
+        }
+
+        private static string ReadMetadata(
+            IDictionary<string, object> metadata,
+            string code,
+            string name,
+            string fallback)
+        {
+            if (metadata.TryGetValue(code, out var value) || metadata.TryGetValue(name, out value))
+            {
+                return value?.ToString() ?? fallback;
+            }
+            return fallback;
+        }
+
+        private void PublishNowPlaying()
+        {
+            OnNowPlayingChanged?.Invoke(this, _nowPlaying.Clone());
         }
     }
 }

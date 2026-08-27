@@ -23,12 +23,16 @@ namespace AirPlay.Android;
     ForegroundServiceType = ForegroundService.TypeMediaPlayback)]
 public sealed class AirPlayForegroundService : Service
 {
+    public const string ActionPlayPause = "com.philphall.tclairplayreceiver.MEDIA_PLAY_PAUSE";
+    public const string ActionPrevious = "com.philphall.tclairplayreceiver.MEDIA_PREVIOUS";
+    public const string ActionNext = "com.philphall.tclairplayreceiver.MEDIA_NEXT";
     private const string ChannelId = "tcl_airplay_receiver";
     private const int NotificationId = 2102;
     private CancellationTokenSource? _cancellation;
     private IAirPlayReceiver? _receiver;
     private AudioTrackSink? _audio;
     private H264SurfaceSink? _video;
+    private DacpRemoteController? _dacp;
     private WifiManager.MulticastLock? _multicastLock;
     private Task? _startTask;
     private long _lastTvInputLaunchMs;
@@ -36,7 +40,6 @@ public sealed class AirPlayForegroundService : Service
     private int _lastVideoWidth;
     private int _lastVideoHeight;
     private long _surfaceReadySinceMs;
-    private bool _tvInputWasOpened;
 
     public override void OnCreate()
     {
@@ -48,13 +51,28 @@ public sealed class AirPlayForegroundService : Service
         _cancellation = new CancellationTokenSource();
         _audio = new AudioTrackSink();
         _video = new H264SurfaceSink();
+        _dacp = new DacpRemoteController(this);
         _startTask = Task.Run(
             () => StartReceiverAsync(_cancellation.Token),
             _cancellation.Token);
     }
 
-    public override StartCommandResult OnStartCommand(Intent? intent, StartCommandFlags flags, int startId) =>
-        StartCommandResult.Sticky;
+    public override StartCommandResult OnStartCommand(Intent? intent, StartCommandFlags flags, int startId)
+    {
+        if (intent?.Action == ActionPlayPause)
+        {
+            _ = _dacp?.SendAsync("playpause");
+        }
+        else if (intent?.Action == ActionPrevious)
+        {
+            _ = _dacp?.SendAsync("previtem");
+        }
+        else if (intent?.Action == ActionNext)
+        {
+            _ = _dacp?.SendAsync("nextitem");
+        }
+        return StartCommandResult.Sticky;
+    }
 
     public override global::Android.OS.IBinder? OnBind(Intent? intent) => null;
 
@@ -104,6 +122,11 @@ public sealed class AirPlayForegroundService : Service
                 _video?.Write(frame);
             };
             _receiver.OnSetVolumeReceived += (_, volume) => _audio?.SetVolume(volume);
+            _receiver.OnNowPlayingChanged += (_, nowPlaying) =>
+            {
+                _dacp?.UpdateIdentity(nowPlaying.ActiveRemote, nowPlaying.DacpId);
+                NowPlayingStatus.Publish(nowPlaying);
+            };
             _receiver.OnDiagnosticReceived += (_, message) =>
                 global::Android.Util.Log.Info("TclAirPlayProtocol", message);
 
@@ -217,11 +240,6 @@ public sealed class AirPlayForegroundService : Service
         var surface = ReceiverSurfaceRegistry.Current;
         if (surface?.IsValid == true)
         {
-            _tvInputWasOpened = true;
-            return;
-        }
-        if (_tvInputWasOpened)
-        {
             return;
         }
 
@@ -314,6 +332,7 @@ public sealed class AirPlayForegroundService : Service
         }
         _video?.Dispose();
         _audio?.Dispose();
+        _dacp?.Dispose();
         if (_multicastLock?.IsHeld == true)
         {
             _multicastLock.Release();

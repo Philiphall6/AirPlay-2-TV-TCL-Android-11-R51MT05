@@ -1,5 +1,7 @@
 using System;
+using System.Linq;
 using AirPlay.Android.Platform;
+using AirPlay.Models;
 using Android.App;
 using Android.Content;
 using Android.Content.PM;
@@ -34,6 +36,14 @@ public sealed class MainActivity : Activity, ISurfaceHolderCallback
     private EditText? _receiverName;
     private Handler? _restartHandler;
     private LinearLayout? _chrome;
+    private LinearLayout? _audioScreen;
+    private ImageView? _artwork;
+    private TextView? _trackTitle;
+    private TextView? _trackDetails;
+    private TextView? _playPauseLabel;
+    private ProgressBar? _trackProgress;
+    private CheckBox? _audioScreenToggle;
+    private NowPlayingInfo _nowPlaying = new();
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
@@ -68,8 +78,15 @@ public sealed class MainActivity : Activity, ISurfaceHolderCallback
         frame.AddView(_chrome, new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MatchParent,
             ViewGroup.LayoutParams.MatchParent));
+        _audioScreen = BuildNowPlayingScreen();
+        _audioScreen.Visibility = ViewStates.Gone;
+        frame.AddView(_audioScreen, new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MatchParent,
+            ViewGroup.LayoutParams.MatchParent));
         SetContentView(frame);
         ReceiverStatus.Changed += OnStatusChanged;
+        NowPlayingStatus.Changed += OnNowPlayingChanged;
+        ApplyNowPlaying(NowPlayingStatus.Current);
     }
 
     private View BuildHeader()
@@ -154,6 +171,21 @@ public sealed class MainActivity : Activity, ISurfaceHolderCallback
         panel.AddView(_namePreview, MatchWidthWithTopMargin(Dp(12)));
         UpdateNamePreview();
 
+        _audioScreenToggle = new CheckBox(this)
+        {
+            Text = "Afficher la pochette et les commandes pendant la lecture audio",
+            TextSize = 14f,
+            Checked = AudioScreenSettings.IsEnabled(this)
+        };
+        _audioScreenToggle.SetTextColor(PrimaryText);
+        _audioScreenToggle.ButtonTintList = global::Android.Content.Res.ColorStateList.ValueOf(AppleBlue);
+        _audioScreenToggle.CheckedChange += (_, args) =>
+        {
+            AudioScreenSettings.Save(this, args.IsChecked);
+            ApplyNowPlaying(_nowPlaying);
+        };
+        panel.AddView(_audioScreenToggle, MatchWidthWithTopMargin(Dp(14)));
+
         var controls = new LinearLayout(this)
         {
             Orientation = Orientation.Horizontal
@@ -172,6 +204,142 @@ public sealed class MainActivity : Activity, ISurfaceHolderCallback
         start.RequestFocus();
 
         return panel;
+    }
+
+    private LinearLayout BuildNowPlayingScreen()
+    {
+        var screen = new LinearLayout(this)
+        {
+            Orientation = Orientation.Horizontal
+        };
+        screen.SetGravity(GravityFlags.Center);
+        screen.SetPadding(Dp(110), Dp(70), Dp(110), Dp(70));
+        screen.SetBackgroundColor(Color.Black);
+
+        _artwork = new ImageView(this)
+        {
+            ContentDescription = "Pochette de l’album"
+        };
+        _artwork.SetScaleType(ImageView.ScaleType.CenterCrop);
+        _artwork.SetImageResource(Resource.Drawable.app_icon);
+        _artwork.Background = RoundedBackground(FieldColor, Dp(20), BorderColor, 1);
+        screen.AddView(_artwork, new LinearLayout.LayoutParams(Dp(390), Dp(390))
+        {
+            RightMargin = Dp(70)
+        });
+
+        var information = new LinearLayout(this)
+        {
+            Orientation = Orientation.Vertical
+        };
+        information.SetGravity(GravityFlags.CenterVertical);
+        _trackTitle = CreateText("Lecture AirPlay", 30f, PrimaryText, true);
+        _trackTitle.SetMaxLines(2);
+        _trackDetails = CreateText("En attente des métadonnées…", 18f, SecondaryText, false);
+        _trackDetails.SetMaxLines(2);
+        information.AddView(CreateText("AIRPLAY AUDIO", 12f, AppleBlue, true));
+        information.AddView(_trackTitle, WithTopMargin(Dp(12)));
+        information.AddView(_trackDetails, WithTopMargin(Dp(8)));
+
+        _trackProgress = new ProgressBar(this, null, global::Android.Resource.Attribute.ProgressBarStyleHorizontal)
+        {
+            Max = 1000,
+            Progress = 0
+        };
+        information.AddView(_trackProgress, new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MatchParent, Dp(8))
+        {
+            TopMargin = Dp(28)
+        });
+
+        var controls = new LinearLayout(this)
+        {
+            Orientation = Orientation.Horizontal
+        };
+        controls.SetGravity(GravityFlags.CenterVertical);
+        var previous = CreateButton("◀◀", false);
+        var playPause = CreateButton("▶", true);
+        var next = CreateButton("▶▶", false);
+        _playPauseLabel = playPause;
+        previous.ContentDescription = "Morceau précédent";
+        playPause.ContentDescription = "Lecture ou pause";
+        next.ContentDescription = "Morceau suivant";
+        previous.Click += (_, _) => SendMediaCommand(AirPlayForegroundService.ActionPrevious);
+        playPause.Click += (_, _) => SendMediaCommand(AirPlayForegroundService.ActionPlayPause);
+        next.Click += (_, _) => SendMediaCommand(AirPlayForegroundService.ActionNext);
+        controls.AddView(previous, new LinearLayout.LayoutParams(Dp(110), Dp(62)));
+        controls.AddView(playPause, new LinearLayout.LayoutParams(Dp(128), Dp(68))
+        {
+            LeftMargin = Dp(18),
+            RightMargin = Dp(18)
+        });
+        controls.AddView(next, new LinearLayout.LayoutParams(Dp(110), Dp(62)));
+        information.AddView(controls, WithTopMargin(Dp(30)));
+        screen.AddView(information, new LinearLayout.LayoutParams(0,
+            ViewGroup.LayoutParams.WrapContent, 1f));
+        return screen;
+    }
+
+    private void SendMediaCommand(string action)
+    {
+        var intent = new Intent(this, typeof(AirPlayForegroundService));
+        intent.SetAction(action);
+        StartForegroundService(intent);
+    }
+
+    private void OnNowPlayingChanged(object? sender, NowPlayingInfo value) =>
+        RunOnUiThread(() => ApplyNowPlaying(value));
+
+    private void ApplyNowPlaying(NowPlayingInfo value)
+    {
+        _nowPlaying = value.Clone();
+        if (_trackTitle != null)
+        {
+            _trackTitle.Text = string.IsNullOrWhiteSpace(value.Title) ? "Lecture AirPlay" : value.Title;
+        }
+        if (_trackDetails != null)
+        {
+            var details = string.Join(" · ", new[] { value.Artist, value.Album }
+                .Where(item => !string.IsNullOrWhiteSpace(item)));
+            _trackDetails.Text = string.IsNullOrWhiteSpace(details)
+                ? "En attente des métadonnées…"
+                : details;
+        }
+        if (_playPauseLabel != null)
+        {
+            _playPauseLabel.Text = value.IsPlaying ? "Ⅱ" : "▶";
+        }
+        if (_trackProgress != null)
+        {
+            var duration = value.ProgressEnd - value.ProgressStart;
+            var elapsed = value.ProgressCurrent - value.ProgressStart;
+            _trackProgress.Progress = duration > 0
+                ? (int)Math.Clamp(elapsed * 1000L / duration, 0L, 1000L)
+                : 0;
+        }
+        if (_artwork != null)
+        {
+            if (value.Artwork?.Length > 0)
+            {
+                var bitmap = BitmapFactory.DecodeByteArray(value.Artwork, 0, value.Artwork.Length);
+                _artwork.SetImageBitmap(bitmap);
+            }
+            else
+            {
+                _artwork.SetImageResource(Resource.Drawable.app_icon);
+            }
+        }
+
+        var showAudio = AudioScreenSettings.IsEnabled(this) &&
+            (value.IsPlaying || !string.IsNullOrWhiteSpace(value.Title) || value.Artwork?.Length > 0);
+        if (_audioScreen != null)
+        {
+            _audioScreen.Visibility = showAudio ? ViewStates.Visible : ViewStates.Gone;
+        }
+        if (_chrome != null && !ReceiverStatus.Current.StartsWith("Décodage H.264", StringComparison.Ordinal))
+        {
+            _chrome.Visibility = showAudio ? ViewStates.Gone : ViewStates.Visible;
+        }
     }
 
     private void SaveAndRestartReceiver()
@@ -222,6 +390,10 @@ public sealed class MainActivity : Activity, ISurfaceHolderCallback
                 if (_chrome != null)
                 {
                     _chrome.Visibility = ViewStates.Gone;
+                }
+                if (_audioScreen != null)
+                {
+                    _audioScreen.Visibility = ViewStates.Gone;
                 }
             }
         });
@@ -312,6 +484,7 @@ public sealed class MainActivity : Activity, ISurfaceHolderCallback
     protected override void OnDestroy()
     {
         ReceiverStatus.Changed -= OnStatusChanged;
+        NowPlayingStatus.Changed -= OnNowPlayingChanged;
         ReceiverSurfaceRegistry.Set(null);
         _restartHandler?.RemoveCallbacksAndMessages(null);
         _restartHandler?.Dispose();

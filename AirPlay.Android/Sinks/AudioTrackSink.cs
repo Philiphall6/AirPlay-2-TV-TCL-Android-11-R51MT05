@@ -9,6 +9,7 @@ internal sealed class AudioTrackSink : IDisposable
     private const int SampleRate = 44100;
     private readonly object _gate = new();
     private AudioTrack? _track;
+    private bool _paused;
 
     public void Write(PcmData pcm)
     {
@@ -19,9 +20,34 @@ internal sealed class AudioTrackSink : IDisposable
 
         lock (_gate)
         {
+            if (_paused)
+            {
+                return;
+            }
             EnsureStarted();
             var length = Math.Min(pcm.Length, pcm.Data.Length);
             _track!.Write(pcm.Data, 0, length);
+        }
+    }
+
+    public void SetPaused(bool paused)
+    {
+        lock (_gate)
+        {
+            _paused = paused;
+            if (_track == null)
+            {
+                return;
+            }
+            if (paused)
+            {
+                _track.Pause();
+                _track.Flush();
+            }
+            else
+            {
+                _track.Play();
+            }
         }
     }
 

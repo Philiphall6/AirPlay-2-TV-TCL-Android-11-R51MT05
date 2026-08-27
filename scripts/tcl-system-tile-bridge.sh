@@ -8,6 +8,7 @@ while true; do
   while IFS= read -r line; do
     case "$line" in
       *"BroadcastReceiver gets action : Show.Home.AirplayAPK"*)
+        am force-stop com.tcl.airplay2 >/dev/null 2>&1
         am start --user 0 -n com.philphall.tclairplayreceiver/com.philphall.tclairplayreceiver.MainActivity >/dev/null 2>&1
         ;;
     esac

@@ -270,6 +270,12 @@ namespace AirPlay.Listeners
 
         private void ProcessSpsPps(byte[] payload, out byte[] spsPps)
         {
+            spsPps = null;
+            if (payload == null || payload.Length < 11)
+            {
+                _receiver.OnDiagnostic("Configuration H264 miroir trop courte");
+                return;
+            }
             var h264 = new H264Codec();
 
             h264.Version = payload[0];
@@ -280,11 +286,26 @@ namespace AirPlay.Listeners
             h264.Reserved3AndSps = payload[5];
             h264.LengthOfSps = (short)(((payload[6] & 255) << 8) + (payload[7] & 255));
 
+            if (h264.LengthOfSps <= 0 || 8 + h264.LengthOfSps + 3 > payload.Length)
+            {
+                _receiver.OnDiagnostic($"Longueur SPS miroir invalide: {h264.LengthOfSps}/{payload.Length}");
+                return;
+            }
+
             var sequence = new byte[h264.LengthOfSps];
             Array.Copy(payload, 8, sequence, 0, h264.LengthOfSps);
             h264.SequenceParameterSet = sequence;
             h264.NumberOfPps = payload[h264.LengthOfSps + 8];
-            h264.LengthOfPps = (short)(((payload[h264.LengthOfSps + 9] & 2040) + payload[h264.LengthOfSps + 10]) & 255);
+            h264.LengthOfPps = (short)(
+                ((payload[h264.LengthOfSps + 9] & 255) << 8) |
+                (payload[h264.LengthOfSps + 10] & 255));
+
+            if (h264.LengthOfPps <= 0 ||
+                h264.LengthOfSps + 11 + h264.LengthOfPps > payload.Length)
+            {
+                _receiver.OnDiagnostic($"Longueur PPS miroir invalide: {h264.LengthOfPps}/{payload.Length}");
+                return;
+            }
 
             var picture = new byte[h264.LengthOfPps];
             Array.Copy(payload, h264.LengthOfSps + 11, picture, 0, h264.LengthOfPps);

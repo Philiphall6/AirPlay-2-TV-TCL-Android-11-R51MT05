@@ -9,12 +9,12 @@ SteeBono et l’intégration TCL `TVInputService`.
 
 ## Nouveautés v10.0
 
-- application Android `10.0` (`versionCode=24`) ;
+- application Android `10.0` (`versionCode=25`) ;
 - l’entrée système AirPlay du menu TCL ouvre directement l’application v10.0
   grâce au pont d’accessibilité ;
-- le paquet TCL `com.tcl.airplay2` et son `BootupReceiver` restent actifs afin
-  que la tuile fonctionne ; seul son ancien `BootupService`, responsable de la
-  boîte 904, est désactivé, et le pont root ouvre directement la v10 dès que le
+- le paquet TCL `com.tcl.airplay2`, son `BootupReceiver` et son `BootupService`
+  restent actifs afin que la tuile et la bascule vidéo fonctionnent ; le pont
+  root arrête le processus hérité avant la boîte 904 et ouvre la v10 dès que le
   `BootupReceiver` journalise `Show.Home.AirplayAPK` ;
 - le lancement vidéo interne reste séparé grâce au marqueur `STEEBONO_VIDEO`,
   afin de conserver le pont `TVInputService` pendant une recopie d’écran ;
@@ -28,6 +28,11 @@ SteeBono et l’intégration TCL `TVInputService`.
 - masquage de l’interface au démarrage du décodage H.264 afin de libérer
   l’affichage vidéo plein écran ;
 - réaffichage de l’interface avec une touche de la télécommande.
+- écran audio optionnel avec pochette, métadonnées, progression et commandes
+  DACP lecture/pause/précédent/suivant ;
+- lecture des pochettes JPEG et PNG et remise à zéro à la fin de la session ;
+- corrections du lecteur H.264 pour les SPS/PPS, les horodatages NTP et
+  l’attente des buffers d’entrée du décodeur Realtek.
 
 ## Fonctions conservées
 
@@ -49,7 +54,7 @@ SteeBono et l’intégration TCL `TVInputService`.
 - installation APK par mise à jour réussie avec la même signature que v9.23 ;
 - service au premier plan actif ;
 - ports TCP audio 5000 et vidéo 7000 accessibles ;
-- module Magisk v10.0 (`versionCode=36`) installé comme mise à jour persistante ;
+- module Magisk v10.0 (`versionCode=38`) installé comme mise à jour persistante ;
 - redémarrage automatique du service vérifié, avec retour des ports 5000 et 7000.
 
 ## Fichiers
@@ -60,7 +65,7 @@ SteeBono et l’intégration TCL `TVInputService`.
 
 SHA-256 :
 
-`a6cbfae2fea9c7a57227ce529446031c94944ef2311cfb6e7b107c29e4b16f01`
+`a30ceca381390629a5aba8909c026dc0c712fae487587f5b1c41a6d4df906c91`
 
 ### APK Android ARMv7
 
@@ -68,7 +73,7 @@ SHA-256 :
 
 SHA-256 :
 
-`ae356d4cc5c555f9def32c7bd3d562a6ebcc7fafcff5a5e41e3edf47d21e5727`
+`f4bafad58955ef0763a894ae86b12b692226fd28d419d369cacf47ee5ed4cfa3`
 
 ## Installation
 

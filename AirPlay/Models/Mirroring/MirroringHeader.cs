@@ -44,7 +44,9 @@ namespace AirPlay.Models
 
         private long NtpToPts(long ntp)
         {
-            return (((ntp >> 32) & 0xffffffff) * 1000000) + ((ntp & 0xffffffff) * 1000 * 1000 / Int32.MaxValue);
+            const long ntpFractionScale = 1L << 32;
+            return (((ntp >> 32) & 0xffffffff) * 1000000) +
+                ((ntp & 0xffffffff) * 1000000 / ntpFractionScale);
         }
     }
 }
