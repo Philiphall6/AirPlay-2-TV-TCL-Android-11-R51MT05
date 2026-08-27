@@ -157,6 +157,16 @@ Replacement engine:
 - AirPlay/RAOP listeners on ports 7000/5000 and mDNS announcements
 - compatibility receiver for TCL start, restart and stop broadcasts
 
+Current receiver features:
+- separate TCL G03 Audio and TCL G03 Video AirPlay destinations
+- PCM, AAC/AAC-ELD and ALAC audio through Android AudioTrack
+- H.264 mirroring through the Realtek hardware MediaCodec decoder
+- exact mirroring TCP framing, multi-NAL access units and IDR/SPS/PPS recovery
+- direct TCL TVInputService Surface bridge with centered portrait/landscape ratio
+- delayed aspect transform so the Realtek decoder starts on a full-size buffer
+- one-shot TCL source switching per session to keep the direct player visible
+- no persistent media recording or H.264/audio dump
+
 Not included:
 - com.mediatek.airplaydaemon (the old proprietary engine)
 

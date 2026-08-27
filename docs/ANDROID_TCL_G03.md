@@ -234,3 +234,11 @@ The current source revision is Android engine 0.3.18 (`versionCode=21`). Once
 a valid TCL TV-input Surface has been observed for a mirroring session, it no
 longer repeats `Start.LunaTest`; this prevents the general TCL TV activity from
 replacing the direct aspect-correct AirPlay player after playback has started.
+
+## Complete v9.23 package
+
+The GitHub Release asset is built as
+`tcl-airplay-v9.23-all-in-one-magisk.zip`. It combines the current TCL launcher,
+patched player, Android engine 0.3.18, both ARMv7 audio codecs, boot service,
+SELinux permission merge, documentation and licenses in one Magisk archive.
+See `docs/RELEASE_V9.23.md` for the asset description and installation notes.
