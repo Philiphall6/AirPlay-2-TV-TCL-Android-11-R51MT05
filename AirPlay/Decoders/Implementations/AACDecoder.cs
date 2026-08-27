@@ -106,9 +106,16 @@ namespace AirPlay
 
         public void Dispose()
         {
-            _aacDecoder_Close(_decoder);
-            LibraryLoader.DlClose(_handle);
-            Marshal.FreeBSTR(_handle);
+            if (_decoder != IntPtr.Zero)
+            {
+                _aacDecoder_Close(_decoder);
+                _decoder = IntPtr.Zero;
+            }
+            if (_handle != IntPtr.Zero)
+            {
+                LibraryLoader.DlClose(_handle);
+                _handle = IntPtr.Zero;
+            }
         }
 
         private AACDecoderError Fill(IntPtr decoder, byte[] pBuffer, uint bufferSize, uint pBytesValid)
@@ -122,9 +129,14 @@ namespace AirPlay
                 ptr
             };
 
-            var res = _aacDecoder_Fill(decoder, byteArrayPtr, &bufferSize, &pBytesValid);
-
-            return res;
+            try
+            {
+                return _aacDecoder_Fill(decoder, byteArrayPtr, &bufferSize, &pBytesValid);
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(ptr);
+            }
         }
 
         private AACDecoderError InternalDecodeFrame(ref byte[] output, int pcm_pkt_size, uint flags)
@@ -135,7 +147,8 @@ namespace AirPlay
             AACDecoderError res;
             try
             {
-                res = _aacDecoder_DecodeFrame(_decoder, ptr, pcm_pkt_size, flags);
+                // FDK expects the output capacity in PCM samples, not bytes.
+                res = _aacDecoder_DecodeFrame(_decoder, ptr, pcm_pkt_size / sizeof(short), flags);
                 if (res == AACDecoderError.AAC_DEC_OK)
                 {
                     Marshal.Copy(ptr, output, 0, pcm_pkt_size);
@@ -191,9 +204,14 @@ namespace AirPlay
                 ptr
             };
 
-            var res = _aacDecoder_ConfigRaw(_decoder, byteArrayPtr, &length);
-
-            return (int)res;
+            try
+            {
+                return (int)_aacDecoder_ConfigRaw(_decoder, byteArrayPtr, &length);
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(ptr);
+            }
         }
     }
 

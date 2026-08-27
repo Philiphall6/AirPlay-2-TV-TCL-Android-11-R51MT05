@@ -10,9 +10,12 @@ namespace AirPlay
         event EventHandler<decimal> OnSetVolumeReceived;
         event EventHandler<H264Data> OnH264DataReceived;
         event EventHandler<PcmData> OnPCMDataReceived;
+        event EventHandler<string> OnDiagnosticReceived;
 
         Task StartListeners(CancellationToken cancellationToken);
 
         Task StartMdnsAsync();
+
+        Task StopAsync();
     }
 }

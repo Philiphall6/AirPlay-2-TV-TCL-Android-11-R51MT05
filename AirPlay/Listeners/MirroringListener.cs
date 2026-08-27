@@ -24,6 +24,7 @@ namespace AirPlay.Listeners
 
         private byte[] _og = new byte[16];
         private int _nextDecryptCount;
+        private long _videoFrameCount;
 
         public MirroringListener(IRtspReceiver receiver, string sessionId, ushort port) : base(port, true)
         {
@@ -49,100 +50,93 @@ namespace AirPlay.Listeners
             InitAesCtrCipher(session.DecryptedAesKey, session.EcdhShared, session.StreamConnectionId);
 
             var headerBuffer = new byte[128];
-            var readStart = 0;
-
-            do
+            while (!cancellationToken.IsCancellationRequested)
             {
-                MirroringHeader header;
-                if (stream.DataAvailable)
+                var readStart = 0;
+                if (!await ReadExactlyAsync(stream, headerBuffer, readStart, 4, cancellationToken).ConfigureAwait(false))
                 {
-                    var ret = await stream.ReadAsync(headerBuffer, readStart, 4 - readStart);
-                    readStart += ret;
-                    if (readStart < 4)
-                    {
-                        continue;
-                    }
-
-                    if ((headerBuffer[0] == 80 && headerBuffer[1] == 79 && headerBuffer[2] == 83 && headerBuffer[3] == 84) || (headerBuffer[0] == 71 && headerBuffer[1] == 69 && headerBuffer[2] == 84))
-                    {
-                        // Request is POST or GET (skip)
-                    }
-                    else
-                    {
-                        do
-                        {
-                            ret = await stream.ReadAsync(headerBuffer, readStart, 128 - readStart);
-                            if (ret <= 0)
-                            {
-                                break;
-                            }
-                            readStart += ret;
-                        } while (readStart < 128);
-
-                        header = new MirroringHeader(headerBuffer);
-
-                        if (!session.Pts.HasValue)
-                        {
-                            session.Pts = header.PayloadPts;
-                        }
-                        if (!session.WidthSource.HasValue)
-                        {
-                            session.WidthSource = header.WidthSource;
-                        }
-                        if (!session.HeightSource.HasValue)
-                        {
-                            session.HeightSource = header.HeightSource;
-                        }
-
-                        if (header != null && stream.DataAvailable)
-                        {
-                            try
-                            {
-                                byte[] payload = (byte[])Array.CreateInstance(typeof(byte), header.PayloadSize);
-
-                                readStart = 0;
-                                do
-                                {
-                                    ret = await stream.ReadAsync(payload, readStart, header.PayloadSize - readStart);
-                                    readStart += ret;
-                                } while (readStart < header.PayloadSize);
-
-                                if (header.PayloadType == 0)
-                                {
-                                    DecryptVideoData(payload, out byte[] output);
-                                    ProcessVideo(output, session.SpsPps, session.Pts.Value, session.WidthSource.Value, session.HeightSource.Value);
-                                }
-                                else if (header.PayloadType == 1)
-                                {
-                                    ProcessSpsPps(payload, out byte[] spsPps);
-                                    session.SpsPps = spsPps;
-                                }
-                                else
-                                {
-                                    // SKIP
-                                }
-                            }
-                            catch (Exception e)
-                            {
-                                Console.WriteLine(e);
-                            }
-                        }
-
-                        await Task.Delay(10);
-
-                        // Save current session
-                        await SessionManager.Current.CreateOrUpdateSessionAsync(_sessionId, session);
-                    }
+                    break;
                 }
 
-                // Fix issue #24
-                await Task.Delay(1);
-                readStart = 0;
-                header = null;
+                if ((headerBuffer[0] == 80 && headerBuffer[1] == 79 && headerBuffer[2] == 83 && headerBuffer[3] == 84) ||
+                    (headerBuffer[0] == 71 && headerBuffer[1] == 69 && headerBuffer[2] == 84))
+                {
+                    _receiver.OnDiagnostic("Requête texte inattendue sur le canal miroir");
+                    break;
+                }
+
+                readStart = 4;
+                if (!await ReadExactlyAsync(stream, headerBuffer, readStart, 128 - readStart, cancellationToken).ConfigureAwait(false))
+                {
+                    break;
+                }
+
+                var header = new MirroringHeader(headerBuffer);
+                if (header.PayloadSize < 0 || header.PayloadSize > 16 * 1024 * 1024)
+                {
+                    _receiver.OnDiagnostic($"Taille miroir invalide: {header.PayloadSize}");
+                    break;
+                }
+
+                var payload = new byte[header.PayloadSize];
+                if (!await ReadExactlyAsync(stream, payload, 0, payload.Length, cancellationToken).ConfigureAwait(false))
+                {
+                    break;
+                }
+
+                try
+                {
+                    if (header.PayloadType == 0)
+                    {
+                        session.Pts = header.PayloadPts;
+                        if (session.SpsPps != null && session.WidthSource.HasValue && session.HeightSource.HasValue)
+                        {
+                            DecryptVideoData(payload, out byte[] output);
+                            ProcessVideo(output, session.SpsPps, header.PayloadPts,
+                                session.WidthSource.Value, session.HeightSource.Value);
+                        }
+                    }
+                    else if (header.PayloadType == 1)
+                    {
+                        ProcessSpsPps(payload, out byte[] spsPps);
+                        session.SpsPps = spsPps;
+                        session.WidthSource = header.WidthSource;
+                        session.HeightSource = header.HeightSource;
+                        _receiver.OnDiagnostic(
+                            $"Miroir SPS/PPS: {header.WidthSource}x{header.HeightSource}, {spsPps?.Length ?? 0} octets");
+                    }
+                }
+                catch (Exception e)
+                {
+                    _receiver.OnDiagnostic($"Erreur paquet miroir: {e.GetType().Name}: {e.Message}");
+                }
+
+                await SessionManager.Current.CreateOrUpdateSessionAsync(_sessionId, session);
                 headerBuffer = new byte[128];
-            } while (client.Connected && stream.CanRead && !cancellationToken.IsCancellationRequested);
+            }
 
             Console.WriteLine($"Closing mirroring connection..");
+        }
+
+        private static async Task<bool> ReadExactlyAsync(
+            NetworkStream stream,
+            byte[] buffer,
+            int offset,
+            int count,
+            CancellationToken cancellationToken)
+        {
+            while (count > 0)
+            {
+                var read = await stream.ReadAsync(
+                    buffer.AsMemory(offset, count), cancellationToken).ConfigureAwait(false);
+                if (read <= 0)
+                {
+                    return false;
+                }
+                offset += read;
+                count -= read;
+            }
+            return true;
         }
 
         private void DecryptVideoData(byte[] videoData, out byte[] output)
@@ -201,52 +195,76 @@ namespace AirPlay.Listeners
 
         private void ProcessVideo(byte[] payload, byte[] spsPps, long pts, int widthSource, int heightSource)
         {
-            int nalu_size = 0;
-            while (nalu_size < payload.Length)
+            if (payload == null || payload.Length < 5 || spsPps == null || spsPps.Length == 0)
             {
-                int nc_len = (payload[nalu_size + 3] & 0xFF) | ((payload[nalu_size + 2] & 0xFF) << 8) | ((payload[nalu_size + 1] & 0xFF) << 16) | ((payload[nalu_size] & 0xFF) << 24);
-                if (nc_len > 0)
-                {
-                    payload[nalu_size] = 0;
-                    payload[nalu_size + 1] = 0;
-                    payload[nalu_size + 2] = 0;
-                    payload[nalu_size + 3] = 1;
-                    nalu_size += nc_len + 4;
-                }
-                if (payload.Length - nc_len > 4)
-                {
-                    return;
-                }
+                return;
             }
 
-            if (spsPps.Length != 0)
+            var offset = 0;
+            var firstFrameType = 0;
+            var containsIdr = false;
+            var naluCount = 0;
+            while (offset + 4 <= payload.Length)
             {
-                var h264Data = new H264Data();
-                h264Data.FrameType = payload[4] & 0x1f;
-                if (h264Data.FrameType == 5)
+                var naluLength =
+                    ((payload[offset] & 0xff) << 24) |
+                    ((payload[offset + 1] & 0xff) << 16) |
+                    ((payload[offset + 2] & 0xff) << 8) |
+                    (payload[offset + 3] & 0xff);
+                if (naluLength <= 0 || offset + 4 + naluLength > payload.Length)
                 {
-                    var payloadOut = (byte[])Array.CreateInstance(typeof(byte), payload.Length + spsPps.Length);
-
-                    Array.Copy(spsPps, 0, payloadOut, 0, spsPps.Length);
-                    Array.Copy(payload, 0, payloadOut, spsPps.Length, payload.Length);
-
-                    h264Data.Data = payloadOut;
-                    h264Data.Length = payload.Length + spsPps.Length;
-
-                    // Release payload
-                    payload = null;
-                }
-                else
-                {
-                    h264Data.Data = payload;
-                    h264Data.Length = payload.Length;
+                    _receiver.OnDiagnostic(
+                        $"NAL miroir invalide: offset={offset}, taille={naluLength}, paquet={payload.Length}");
+                    return;
                 }
 
-                h264Data.Pts = pts;
-                h264Data.Width = widthSource;
-                h264Data.Height = heightSource;
+                var frameType = payload[offset + 4] & 0x1f;
+                if (naluCount == 0)
+                {
+                    firstFrameType = frameType;
+                }
+                containsIdr |= frameType == 5;
+                naluCount++;
 
-                _receiver.OnData(h264Data);
+                payload[offset] = 0;
+                payload[offset + 1] = 0;
+                payload[offset + 2] = 0;
+                payload[offset + 3] = 1;
+                offset += 4 + naluLength;
+            }
+
+            if (offset != payload.Length)
+            {
+                _receiver.OnDiagnostic($"Fin NAL miroir invalide: {offset}/{payload.Length}");
+                return;
+            }
+
+            var h264Data = new H264Data { FrameType = containsIdr ? 5 : firstFrameType };
+            if (containsIdr)
+            {
+                var payloadOut = new byte[payload.Length + spsPps.Length];
+                Array.Copy(spsPps, 0, payloadOut, 0, spsPps.Length);
+                Array.Copy(payload, 0, payloadOut, spsPps.Length, payload.Length);
+                h264Data.Data = payloadOut;
+                h264Data.Length = payloadOut.Length;
+            }
+            else
+            {
+                h264Data.Data = payload;
+                h264Data.Length = payload.Length;
+            }
+
+            h264Data.Pts = pts;
+            h264Data.Width = widthSource;
+            h264Data.Height = heightSource;
+            _receiver.OnData(h264Data);
+
+            _videoFrameCount++;
+            if (containsIdr || _videoFrameCount % 120 == 0)
+            {
+                _receiver.OnDiagnostic(
+                    $"H264 miroir: trame={_videoFrameCount}, NAL={naluCount}, type={h264Data.FrameType}, " +
+                    $"taille={h264Data.Length}, pts={pts}");
             }
         }
 

@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../AirPlay/**/*.cs"
+             Exclude="../AirPlay/Program.cs;../AirPlay/AirPlayService.cs;../AirPlay/obj/**;../AirPlay/bin/**" />
+    <EmbeddedResource Include="../AirPlay/Resources/*.bin"
+                      LogicalName="AirPlay.Resources.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Makaretu.Dns.Multicast" Version="0.27.0" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.0" />
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.7.0" />
+    <PackageReference Include="Chaos.NaCl.Core" Version="1.0.0" />
+    <PackageReference Include="curve25519-pcl" Version="1.0.1" />
+  </ItemGroup>
+</Project>

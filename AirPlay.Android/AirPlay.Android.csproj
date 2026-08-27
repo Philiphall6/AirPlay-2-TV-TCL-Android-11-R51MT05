@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-android34.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>
+    <AndroidMinSdkVersion>30</AndroidMinSdkVersion>
+    <ApplicationId>com.philphall.tclairplayreceiver</ApplicationId>
+    <ApplicationTitle>TCL AirPlay Receiver</ApplicationTitle>
+    <ApplicationVersion>21</ApplicationVersion>
+    <ApplicationDisplayVersion>0.3.18</ApplicationDisplayVersion>
+    <AndroidPackageFormat>apk</AndroidPackageFormat>
+    <RuntimeIdentifier>android-arm</RuntimeIdentifier>
+    <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
+    <RunAOTCompilation>false</RunAOTCompilation>
+    <PublishTrimmed>false</PublishTrimmed>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../AirPlay.Core/AirPlay.Core.csproj" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.0" />
+  </ItemGroup>
+
+</Project>

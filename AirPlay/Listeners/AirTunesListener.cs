@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Globalization;
 using System.Linq;
 using System.Runtime.Serialization.Plists;
 using System.Text;
@@ -55,8 +56,16 @@ namespace AirPlay.Listeners
 
         public override async Task OnDataReceivedAsync(Request request, Response response, CancellationToken cancellationToken)
         {
+            _receiver.OnDiagnostic($"RTSP:{_airTunesPort} {request.Type} {request.Path}, body={request.Body?.Length ?? 0}");
+
             // Get session by active-remote header value
-            var sessionId = request.Headers["Active-Remote"];
+            var sessionId = request.Headers.ContainsKey("Active-Remote")
+                ? request.Headers["Active-Remote"]
+                : request.Headers.ContainsKey("DACP-ID")
+                    ? request.Headers["DACP-ID"]
+                    : request.Headers.ContainsKey("Client-Instance")
+                        ? request.Headers["Client-Instance"]
+                        : $"port-{_airTunesPort}";
             var session = await SessionManager.Current.GetSessionAsync(sessionId);
 
             if (request.Type == RequestType.GET && "/info".Equals(request.Path, StringComparison.OrdinalIgnoreCase))
@@ -286,12 +295,14 @@ namespace AirPlay.Listeners
                     using (var mem = new MemoryStream(request.Body))
                     {
                         var plist = plistReader.ReadObject(mem);
+                        _receiver.OnDiagnostic($"SETUP plist: {string.Join(",", plist.Keys.Cast<object>().Select(key => key?.ToString()))}");
 
                         if (plist.Contains("streams"))
                         {
                             // Always one foreach request
                             var stream = (Dictionary<object, object>)((object[])plist["streams"])[0];
                             var type = (short)stream["type"];
+                            _receiver.OnDiagnostic($"SETUP stream type={type}, keys={string.Join(",", stream.Keys.Select(key => key?.ToString()))}");
 
                             // If screen Mirroring
                             if (type == 110)
@@ -336,6 +347,7 @@ namespace AirPlay.Listeners
                                 {
                                     var audioFormat = (int)stream["audioFormat"];
                                     session.AudioFormat = (AudioFormat)audioFormat;
+                                    _receiver.OnDiagnostic($"SETUP audioFormat=0x{audioFormat:X}");
 
                                     var description = GetAudioFormatDescription(audioFormat);
                                     Console.WriteLine($"Audio type: {description}");
@@ -433,13 +445,18 @@ namespace AirPlay.Listeners
 
                             session.MirroringListener = mirroring;
                         }
-                        if (session.FairPlayReady && (!session.MirroringSession.HasValue || !session.MirroringSession.Value))
+                        // Do not start StreamingListener here. In the upstream code it
+                        // binds the advertised AirPlay port after every non-mirroring
+                        // SETUP, including audio-only sessions. The TCL port keeps that
+                        // port available to RTSP and dedicates _airPlayPort to type 110
+                        // screen-mirroring data only.
+                        // iOS commonly tears the initial mirroring-audio stream down
+                        // and immediately SETUPs it again. A concurrent RTSP request
+                        // can retain the stopped listener in SessionManager; never
+                        // treat that closed pair of UDP sockets as reusable.
+                        if (session.AudioControlListener?.IsStopped == true)
                         {
-                            // Start 'StreamingListener' (handle streaming url)
-                            var streaming = new StreamingListener(_receiver, session.SessionId, _expandedPrivateKey, _airPlayPort);
-                            await streaming.StartAsync(cancellationToken).ConfigureAwait(false);
-
-                            session.StreamingListener = streaming;
+                            session.AudioControlListener = null;
                         }
                         if (session.FairPlayReady && session.AudioSessionReady && session.AudioControlListener == null)
                         {
@@ -448,7 +465,9 @@ namespace AirPlay.Listeners
                             await control.StartAsync(cancellationToken).ConfigureAwait(false);
 
                             session.AudioControlListener = control;
+                            _receiver.OnDiagnostic("Audio UDP actif: control=7002, data=7003");
                         }
+                        _receiver.OnDiagnostic($"Session ready: fairplay={session.FairPlayReady}, audio={session.AudioSessionReady}, mirror={session.MirroringSessionReady}");
                     }
                 }
             }
@@ -485,7 +504,7 @@ namespace AirPlay.Listeners
                             if (key.Equals("volume", StringComparison.OrdinalIgnoreCase))
                             {
                                 // request.Body contains 'volume: N.NNNNNN'
-                                _receiver.OnSetVolume(decimal.Parse(val));
+                                _receiver.OnSetVolume(decimal.Parse(val, CultureInfo.InvariantCulture));
                             }
                             else if (key.Equals("progress", StringComparison.OrdinalIgnoreCase))
                             {
@@ -560,13 +579,25 @@ namespace AirPlay.Listeners
                         if (type == 110)
                         {
                             // Stop mirroring session
-                            await session.MirroringListener.StopAsync();
+                            if (session.MirroringListener != null)
+                            {
+                                await session.MirroringListener.StopAsync();
+                                session.MirroringListener = null;
+                            }
+                            session.StreamConnectionId = null;
+                            _receiver.OnDiagnostic("Session miroir libérée après TEARDOWN");
                         }
                         // If audio session
                         if (type == 96)
                         {
                             // Stop audio session
-                            await session.AudioControlListener.StopAsync();
+                            if (session.AudioControlListener != null)
+                            {
+                                await session.AudioControlListener.StopAsync();
+                                session.AudioControlListener = null;
+                            }
+                            session.AudioFormat = AudioFormat.Unknown;
+                            _receiver.OnDiagnostic("Session audio libérée après TEARDOWN");
                         }
                     }
                 }

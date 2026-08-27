@@ -32,6 +32,7 @@ namespace AirPlay.Listeners
         private ushort _controlSequenceNumber = 0;
         private RaopBuffer _raopBuffer;
         private Socket _cSocket;
+        private readonly SemaphoreSlim _keyInitialization = new SemaphoreSlim(1, 1);
 
         private readonly CodecLibrariesConfig _clConfig;
         private readonly DumpConfig _dConfig;
@@ -49,20 +50,14 @@ namespace AirPlay.Listeners
 
         public override async Task OnRawCSocketAsync(Socket cSocket, CancellationToken cancellationToken)
         {
-            Console.WriteLine("Initializing recevie audio control from socket..");
+            _receiver.OnDiagnostic("Audio UDP control worker démarré");
 
             _cSocket = cSocket;
 
             // Get session by active-remove header value
             var session = await SessionManager.Current.GetSessionAsync(_sessionId);
 
-            // If we have not decripted session AesKey
-            if (session.DecryptedAesKey == null)
-            {
-                byte[] decryptedAesKey = new byte[16];
-                _omgHax.DecryptAesKey(session.KeyMsg, session.AesKey, decryptedAesKey);
-                session.DecryptedAesKey = decryptedAesKey;
-            }
+            await EnsureDecryptedAesKeyAsync(session, cancellationToken).ConfigureAwait(false);
 
             await SessionManager.Current.CreateOrUpdateSessionAsync(_sessionId, session);
 
@@ -126,21 +121,16 @@ namespace AirPlay.Listeners
 
         public override async Task OnRawDSocketAsync(Socket dSocket, CancellationToken cancellationToken)
         {
-            Console.WriteLine("Initializing recevie audio data from socket..");
+            _receiver.OnDiagnostic("Audio UDP data worker démarré");
 
             // Get current session
             var session = await SessionManager.Current.GetSessionAsync(_sessionId);
 
-            // If we have not decripted session AesKey
-            if (session.DecryptedAesKey == null)
-            {
-                byte[] decryptedAesKey = new byte[16];
-                _omgHax.DecryptAesKey(session.KeyMsg, session.AesKey, decryptedAesKey);
-                session.DecryptedAesKey = decryptedAesKey;
-            }
+            await EnsureDecryptedAesKeyAsync(session, cancellationToken).ConfigureAwait(false);
 
             // Initialize decoder
             InitializeDecoder(session.AudioFormat);
+            _receiver.OnDiagnostic($"Décodeur audio initialisé: {session.AudioFormat}");
 
             await SessionManager.Current.CreateOrUpdateSessionAsync(_sessionId, session);
 
@@ -175,7 +165,7 @@ namespace AirPlay.Listeners
                         while ((audiobuf = RaopBufferDequeue(_raopBuffer, ref audiobuflen, ref timestamp, no_resend)) != null)
                         {
                             var pcmData = new PcmData();
-                            pcmData.Length = 960;
+                            pcmData.Length = audiobuflen;
                             pcmData.Data = audiobuf;
 
                             pcmData.Pts = (ulong)(timestamp - _sync_timestamp) * 1000000UL / 44100 + _sync_time;
@@ -201,6 +191,39 @@ namespace AirPlay.Listeners
         {
             RaopBufferFlush(_raopBuffer, nextSequence);
             return Task.CompletedTask;
+        }
+
+        protected override void OnWorkerFailed(string worker, Exception exception)
+        {
+            _receiver.OnDiagnostic($"Audio UDP {worker} arrêté: {exception.GetType().Name}: {exception.Message}");
+        }
+
+        private async Task EnsureDecryptedAesKeyAsync(Session session, CancellationToken cancellationToken)
+        {
+            if (session.DecryptedAesKey != null)
+            {
+                return;
+            }
+
+            await _keyInitialization.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                if (session.DecryptedAesKey != null)
+                {
+                    return;
+                }
+
+                _receiver.OnDiagnostic(
+                    $"Déchiffrement clé audio: keyMsg={session.KeyMsg?.Length ?? 0}, ekey={session.AesKey?.Length ?? 0}, eiv={session.AesIv?.Length ?? 0}");
+                var decryptedAesKey = new byte[16];
+                _omgHax.DecryptAesKey(session.KeyMsg, session.AesKey, decryptedAesKey);
+                session.DecryptedAesKey = decryptedAesKey;
+                _receiver.OnDiagnostic("Clé audio déchiffrée");
+            }
+            finally
+            {
+                _keyInitialization.Release();
+            }
         }
 
         private void InitAesCbcCipher(byte[] aesKey, byte[] ecdhShared, byte[] aesIv)
@@ -371,25 +394,20 @@ namespace AirPlay.Listeners
             }
             else if (!entry.Available)
             {
-                /* Check how much we have space left in the buffer */
-                if (buflen < RAOP_BUFFER_LENGTH)
+                /* Wait for the resend while there is enough jitter-buffer
+                 * headroom. The upstream C# port returned a silent buffer here
+                 * without advancing FirstSeqNum, creating an infinite loop. */
+                if (buflen < RAOP_BUFFER_LENGTH / 8)
                 {
-                    /* Return nothing and hope resend gets on time */
-                    length = entry.AudioBufferSize;
-                    Array.Fill<byte>(entry.AudioBuffer, 0, 0, length);
-
-                    return entry.AudioBuffer;
+                    return null;
                 }
-                /* Risk of buffer overrun, return empty buffer */
-                return Array.Empty<byte>();
-            }
 
-            /* Update buffer and validate entry */
-            if (!entry.Available)
-            {
-                /* Return an empty audio buffer to skip audio */
+                /* Risk of buffer overrun: advance over the missing packet and
+                 * output one silent frame so playback can catch up. */
                 length = entry.AudioBufferSize;
                 Array.Fill<byte>(entry.AudioBuffer, 0, 0, length);
+                pts = entry.TimeStamp;
+                raop_buffer.FirstSeqNum += 1;
 
                 return entry.AudioBuffer;
             }

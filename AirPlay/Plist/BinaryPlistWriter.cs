@@ -13,8 +13,6 @@ namespace System.Runtime.Serialization.Plists
     using System.Globalization;
     using System.IO;
     using System.Linq;
-    using System.Runtime.Serialization;
-    using System.Runtime.Serialization.Formatters.Binary;
     using System.Text;
 
     /// <summary>
@@ -322,24 +320,12 @@ namespace System.Runtime.Serialization.Plists
         /// <returns>The index of the added value.</returns>
         private int AddData(object value)
         {
-            int index = this.objectTable.Count, count = 0, bufferIndex = 0;
+            int index = this.objectTable.Count;
             byte[] buffer = value as byte[];
 
             if (buffer == null)
             {
-                using (MemoryStream stream = new MemoryStream())
-                {
-                    BinaryFormatter formatter = new BinaryFormatter();
-                    formatter.Serialize(stream, value);
-
-                    stream.Position = 0;
-                    buffer = new byte[stream.Length];
-
-                    while (0 < (count = stream.Read(buffer, 0, buffer.Length - bufferIndex)))
-                    {
-                        bufferIndex += count;
-                    }
-                }
+                throw new InvalidOperationException("Binary plist data values must be byte arrays.");
             }
 
             BinaryPlistItem item = new BinaryPlistItem(value);
@@ -604,15 +590,13 @@ namespace System.Runtime.Serialization.Plists
                     {
                         index = this.AddArray(value as IEnumerable);
                     }
-                    else if (typeof(byte[]).IsAssignableFrom(type) 
-                        || typeof(ISerializable).IsAssignableFrom(type) 
-                        || type.IsSerializable)
+                    else if (typeof(byte[]).IsAssignableFrom(type))
                     {
                         index = this.AddData(value);
                     }
                     else
                     {
-                        throw new InvalidOperationException("A type was found in the object table that is not serializable. Types that are natively serializable to a binary plist include: null, booleans, integers, floats, dates, strings, arrays and dictionaries. Any other types must be marked with a SerializableAttribute or implement ISerializable. The type that caused this exception to be thrown is: " + type.FullName);
+                        throw new InvalidOperationException("A type was found in the object table that is not serializable. Types that are natively serializable to a binary plist include: null, booleans, integers, floats, dates, strings, byte arrays, arrays and dictionaries. The type that caused this exception to be thrown is: " + type.FullName);
                     }
 
                     break;

@@ -18,9 +18,11 @@ namespace AirPlay
 
         private delegate IntPtr alacDecoder_InitializeDecoder(int sampleRate, int channels, int bitsPerSample, int framesPerPacket);
         private delegate int alacDecoder_DecodeFrame(IntPtr decoder, IntPtr inBuffer, IntPtr outBuffer, int* ioNumBytes);
+        private delegate int alacDecoder_FinishDecoder(IntPtr decoder);
 
         private alacDecoder_InitializeDecoder _alacDecoder_InitializeDecoder;
         private alacDecoder_DecodeFrame _alacDecoder_DecodeFrame;
+        private alacDecoder_FinishDecoder _alacDecoder_FinishDecoder;
 
         private int _pcm_pkt_size = 0;
 
@@ -39,14 +41,22 @@ namespace AirPlay
             // Get a function pointer symbol
             IntPtr symAlacDecoder_InitializeDecoder = LibraryLoader.DlSym(_handle, "InitializeDecoder");
             IntPtr symAlacDecoder_DecodeFrame = LibraryLoader.DlSym(_handle, "Decode");
+            IntPtr symAlacDecoder_FinishDecoder = LibraryLoader.DlSym(_handle, "FinishDecoder");
 
             // Get a delegate for the function pointer
             _alacDecoder_InitializeDecoder = Marshal.GetDelegateForFunctionPointer<alacDecoder_InitializeDecoder>(symAlacDecoder_InitializeDecoder);
             _alacDecoder_DecodeFrame = Marshal.GetDelegateForFunctionPointer<alacDecoder_DecodeFrame>(symAlacDecoder_DecodeFrame);
+            _alacDecoder_FinishDecoder = Marshal.GetDelegateForFunctionPointer<alacDecoder_FinishDecoder>(symAlacDecoder_FinishDecoder);
         }
 
         public int Config(int sampleRate, int channels, int bitDepth, int frameLength)
         {
+            if (_decoder != IntPtr.Zero)
+            {
+                _alacDecoder_FinishDecoder(_decoder);
+                _decoder = IntPtr.Zero;
+            }
+
             _pcm_pkt_size = frameLength * channels * bitDepth / 8;
 
             _decoder = _alacDecoder_InitializeDecoder(sampleRate, channels, bitDepth, frameLength);
@@ -68,20 +78,38 @@ namespace AirPlay
             var outSize = Marshal.SizeOf(output[0]) * output.Length;
             var outPtr = Marshal.AllocHGlobal(outSize);
 
-            var res = _alacDecoder_DecodeFrame(_decoder, inputPtr, outPtr, &outputLen);
-            if(res == 0)
+            try
             {
-                Marshal.Copy(outPtr, output, 0, outputLen);
-            }
+                // LibALAC uses this value as the encoded input size and then
+                // replaces it with the number of decoded PCM bytes.
+                var decodedLength = input.Length;
+                var res = _alacDecoder_DecodeFrame(_decoder, inputPtr, outPtr, &decodedLength);
+                if(res == 0 && decodedLength >= 0 && decodedLength <= output.Length)
+                {
+                    Marshal.Copy(outPtr, output, 0, decodedLength);
+                }
 
-            return res;
+                return res;
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(inputPtr);
+                Marshal.FreeHGlobal(outPtr);
+            }
         }
 
         public void Dispose()
         {
-            // Close the C++ library
-            LibraryLoader.DlClose(_handle);
-            Marshal.FreeBSTR(_handle);
+            if (_decoder != IntPtr.Zero)
+            {
+                _alacDecoder_FinishDecoder(_decoder);
+                _decoder = IntPtr.Zero;
+            }
+            if (_handle != IntPtr.Zero)
+            {
+                LibraryLoader.DlClose(_handle);
+                _handle = IntPtr.Zero;
+            }
         }
     }
 

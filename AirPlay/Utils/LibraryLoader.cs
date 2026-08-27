@@ -10,11 +10,13 @@ namespace AirPlay.Utils
     {
         static LibraryLoader()
         {
+#if !NET8_0_OR_GREATER
             if (Environment.OSVersion.Platform == PlatformID.Unix || Environment.OSVersion.Platform == PlatformID.MacOSX || (int)Environment.OSVersion.Platform == 128)
             {
                 // Theoretically needed only w/ linux
                 LoadPosixLibrary();
             }
+#endif
         }
 
         static void LoadPosixLibrary()
@@ -69,6 +71,9 @@ namespace AirPlay.Utils
 
         public static IntPtr DlOpen(string fileName, int flags)
         {
+#if NET8_0_OR_GREATER
+            return NativeLibrary.Load(fileName);
+#else
             if (Environment.OSVersion.Platform == PlatformID.Unix || Environment.OSVersion.Platform == PlatformID.MacOSX || (int)Environment.OSVersion.Platform == 128)
             {
                 return dlopen(fileName, flags);
@@ -87,10 +92,14 @@ namespace AirPlay.Utils
                 
                 return dllHandle;
             }
+#endif
         }
 
         public static IntPtr DlSym(IntPtr handle, string symbol)
         {
+#if NET8_0_OR_GREATER
+            return NativeLibrary.GetExport(handle, symbol);
+#else
             if (Environment.OSVersion.Platform == PlatformID.Unix || Environment.OSVersion.Platform == PlatformID.MacOSX || (int)Environment.OSVersion.Platform == 128)
             {
                 return dlsym(handle, symbol);
@@ -99,10 +108,18 @@ namespace AirPlay.Utils
             {
                 return GetProcAddress(handle, symbol);
             }
+#endif
         }
 
         public static IntPtr DlClose (IntPtr handle)
         {
+#if NET8_0_OR_GREATER
+            if (handle != IntPtr.Zero)
+            {
+                NativeLibrary.Free(handle);
+            }
+            return IntPtr.Zero;
+#else
             if (Environment.OSVersion.Platform == PlatformID.Unix || Environment.OSVersion.Platform == PlatformID.MacOSX || (int)Environment.OSVersion.Platform == 128)
             {
                 return dlclose(handle);
@@ -111,6 +128,7 @@ namespace AirPlay.Utils
             {
                 return FreeLibrary(handle);
             }
+#endif
         }
 
         // Used w/ Win32 & Win64
