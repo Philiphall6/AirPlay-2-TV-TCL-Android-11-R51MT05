@@ -8,6 +8,18 @@ with the SteeBono receiver engine.
 > combined TCL/SteeBono interface is not finished. More work is required for
 > reliable portrait/landscape rendering, source transitions and long sessions.
 
+## Tested hardware
+
+This release has been tested on a rooted TCL television with:
+
+- Android TV 11;
+- R51MT05 platform;
+- V652 firmware;
+- Magisk root;
+- ARMv7 (`armeabi-v7a`) architecture.
+
+Other TCL platforms and firmware revisions are not yet validated.
+
 ## Included
 
 - TCL AirPlay launcher and patched `TVInputService` player;

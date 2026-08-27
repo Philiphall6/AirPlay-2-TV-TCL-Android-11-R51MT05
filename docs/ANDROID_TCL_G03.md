@@ -11,6 +11,8 @@ Target:
 
 - TCL BeyondTV4 / G03
 - Android 11, API 30
+- tested platform `R51MT05`
+- tested rooted firmware `V652`
 - `armeabi-v7a`
 
 Upstream baseline:

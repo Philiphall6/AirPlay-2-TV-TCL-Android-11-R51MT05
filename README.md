@@ -24,6 +24,16 @@ Fonctionnalités déjà intégrées :
 - bascule vers l’entrée AirPlay lors du début d’une session ;
 - aucun enregistrement permanent des contenus audio ou vidéo reçus.
 
+### Configuration testée
+
+- téléviseur TCL sous **Android TV 11** ;
+- plateforme **R51MT05** ;
+- firmware **V652** ;
+- téléviseur **rooté avec Magisk** ;
+- architecture **ARMv7 (`armeabi-v7a`)**.
+
+Cette mention décrit la configuration physique utilisée pendant les essais ; elle ne garantit pas encore le fonctionnement sur les autres firmwares ou plateformes TCL.
+
 La documentation technique détaillée se trouve dans [docs/ANDROID_TCL_G03.md](docs/ANDROID_TCL_G03.md).
 
 ## Limitations connues
@@ -33,7 +43,7 @@ La documentation technique détaillée se trouve dans [docs/ANDROID_TCL_G03.md](
 - les changements portrait/paysage et les reconnexions doivent encore être fiabilisés ;
 - les sessions longues et les changements de source demandent davantage de tests ;
 - l’interface utilisateur n’est pas terminée ;
-- le module cible précisément le matériel et le firmware TCL G03 ARMv7 utilisés pour les essais ;
+- le module cible précisément la configuration TCL Android TV 11 R51MT05 rootée, sous firmware V652 et en ARMv7, utilisée pour les essais ;
 - ce projet n’est pas encore une solution AirPlay 2 certifiée ou universelle.
 
 ## Version v9.23 tout compris
