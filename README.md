@@ -1,5 +1,9 @@
 # AirPlay 2 TV TCL Android 11 R51MT05
 
+<p align="center">
+  <img src="AirPlay.Android/Resources/drawable-nodpi/app_icon.png" alt="Icône AirPlay 2 TV TCL : petit robot vert croquant une pomme rouge sur fond noir" width="240">
+</p>
+
 Portage expérimental du moteur open source [SteeBono/airplayreceiver](https://github.com/SteeBono/airplayreceiver) pour les téléviseurs TCL G03 sous Android TV.
 
 L’objectif est de conserver l’interface TCL et d’utiliser le moteur SteeBono pour la réception AirPlay audio et la recopie d’écran, avec une intégration directe à `TVInputService`.
