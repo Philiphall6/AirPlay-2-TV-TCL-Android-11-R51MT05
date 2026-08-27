@@ -1,258 +1,123 @@
-# AirPlay Receiver
-Open source implementation of AirPlay 2 Mirroring / Audio protocol in C# .Net Core.  
+# TCL G03 AirPlay Receiver — portage Android ARMv7
 
-## Generic
+Portage expérimental du moteur open source [SteeBono/airplayreceiver](https://github.com/SteeBono/airplayreceiver) pour les téléviseurs TCL G03 sous Android TV.
 
-Tested on macOS with iPhone 12 Pro iOS14.  
-  
-The project is fully functional, but the AAC and ALAC libraries written in C ++ must be built.  
-  
-## How To
+L’objectif est de conserver l’interface TCL et d’utiliser le moteur SteeBono pour la réception AirPlay audio et la recopie d’écran, avec une intégration directe à `TVInputService`.
 
-### Build AAC Codec
-To download, build and install fdk-aac do the following:  
-  
-Clone the repository and cd into the folder:  
-```
-$ git clone https://github.com/mstorsjo/fdk-aac.git
-$ cd fdk-aac
-```
-  
-Configure the build and make the library:  
-```
-$ autoreconf -fi
-$ ./configure
-$ make
-```
-  
-### Build ALAC Codec
-To download, build and install alac do the following:  
-  
-Clone the repository and cd into the folder:  
-```
-$ git clone https://github.com/mikebrady/alac.git
-$ cd alac
-```
-  
-Download and paste 'GiteKat''s files in 'alac/codec' folder cloned before
-```
-$ https://github.com/GiteKat/LibALAC/tree/master/LibALAC
-```
-  
-The 'mikebrady''s source code does not contains 'extern' keyword.
-We need external linkage so we use 'GiteKat''s source code files.
-  
-<details>
-<summary>
-Edit makefile.original as follow
-</summary>
+> [!WARNING]
+> La version **v9.23 reste expérimentale**. L’audio fonctionne lors des essais actuels, mais des problèmes d’affichage restent à corriger. L’interface TCL/SteeBono doit également être terminée.
 
-```
-# libalac make
+## État actuel
 
-CFLAGS = -g -O3 -c
-LFLAGS = -Wall
-CC = g++
+Fonctionnalités déjà intégrées :
 
-SRCDIR = .
-OBJDIR = ./obj
-INCLUDES = .
+- deux récepteurs mDNS séparés : **TCL G03 Audio** et **TCL G03 Vidéo** ;
+- réception audio PCM, AAC, AAC-ELD et ALAC ;
+- bibliothèques natives ARMv7 `libfdk-aac.so` et `libalac.so` ;
+- sortie audio Android par `AudioTrack` ;
+- décodage vidéo H.264 avec le codec matériel Realtek via `MediaCodec` ;
+- gestion du flux TCP, des paquets multi-NAL, des IDR et des paramètres SPS/PPS ;
+- tentative de récupération automatique du décodeur vidéo ;
+- rendu vers la `Surface` fournie par `TVInputService` ;
+- conservation du ratio et centrage de l’image en portrait ou paysage ;
+- démarrage du service mDNS au démarrage du téléviseur ;
+- bascule vers l’entrée AirPlay lors du début d’une session ;
+- aucun enregistrement permanent des contenus audio ou vidéo reçus.
 
-HEADERS = \
-$(SRCDIR)/EndianPortable.h \
-$(SRCDIR)/aglib.h \
-$(SRCDIR)/ALACAudioTypes.h \
-$(SRCDIR)/ALACBitUtilities.h\
-$(SRCDIR)/ALACDecoder.h \
-$(SRCDIR)/ALACEncoder.h \
-$(SRCDIR)/LibALAC.h \
-$(SRCDIR)/dplib.h \
-$(SRCDIR)/matrixlib.h
+La documentation technique détaillée se trouve dans [docs/ANDROID_TCL_G03.md](docs/ANDROID_TCL_G03.md).
 
-SOURCES = \
-$(SRCDIR)/EndianPortable.c \
-$(SRCDIR)/ALACBitUtilities.c \
-$(SRCDIR)/ALACDecoder.cpp \
-$(SRCDIR)/ALACEncoder.cpp \
-$(SRCDIR)/LibALAC.cpp \
-$(SRCDIR)/ag_dec.c \
-$(SRCDIR)/ag_enc.c \
-$(SRCDIR)/dp_dec.c \
-$(SRCDIR)/dp_enc.c \
-$(SRCDIR)/matrix_dec.c \
-$(SRCDIR)/matrix_enc.c
+## Limitations connues
 
-OBJS = \
-EndianPortable.o \
-ALACBitUtilities.o \
-ALACDecoder.o \
-ALACEncoder.o \
-LibALAC.o \
-ag_dec.o \
-ag_enc.o \
-dp_dec.o \
-dp_enc.o \
-matrix_dec.o \
-matrix_enc.o
+- l’image peut être noire, mal cadrée ou non adaptée à la dalle selon l’orientation et le format source ;
+- certaines activités système TCL peuvent masquer ou remplacer la surface vidéo ;
+- les changements portrait/paysage et les reconnexions doivent encore être fiabilisés ;
+- les sessions longues et les changements de source demandent davantage de tests ;
+- l’interface utilisateur n’est pas terminée ;
+- le module cible précisément le matériel et le firmware TCL G03 ARMv7 utilisés pour les essais ;
+- ce projet n’est pas encore une solution AirPlay 2 certifiée ou universelle.
 
-libalac.a:	$(OBJS)
-	ar rcs libalac.a $(OBJS)
+## Version v9.23 tout compris
 
-EndianPortable.o : EndianPortable.c
-	$(CC) -I $(INCLUDES) $(CFLAGS) EndianPortable.c
+L’archive prête à installer est :
 
-ALACBitUtilities.o : ALACBitUtilities.c
-	$(CC) -I $(INCLUDES) $(CFLAGS) ALACBitUtilities.c
+`tcl-airplay-v9.23-all-in-one-magisk.zip`
 
-ALACDecoder.o : ALACDecoder.cpp
-	$(CC) -I $(INCLUDES) $(CFLAGS) ALACDecoder.cpp
+Elle contient :
 
-ALACEncoder.o : ALACEncoder.cpp
-	$(CC) -I $(INCLUDES) $(CFLAGS) ALACEncoder.cpp
+- le lanceur et l’intégration TV TCL ;
+- le lecteur SteeBono adapté à Android ;
+- l’application Android AirPlay Receiver 0.3.18 (`versionCode 21`) ;
+- les bibliothèques natives ARMv7 AAC et ALAC ;
+- le service de démarrage Magisk ;
+- les scripts d’installation et de désinstallation ;
+- les licences et la documentation embarquée.
 
-LibALAC.o : LibALAC.cpp
-	$(CC) -I $(INCLUDES) $(CFLAGS) LibALAC.cpp
+SHA-256 de l’archive validée :
 
-ag_dec.o : ag_dec.c
-	$(CC) -I $(INCLUDES) $(CFLAGS) ag_dec.c
-
-ag_enc.o : ag_enc.c
-	$(CC) -I $(INCLUDES) $(CFLAGS) ag_enc.c
-
-dp_dec.o : dp_dec.c
-	$(CC) -I $(INCLUDES) $(CFLAGS) dp_dec.c
-
-dp_enc.o : dp_enc.c
-	$(CC) -I $(INCLUDES) $(CFLAGS) dp_enc.c
-
-matrix_dec.o : matrix_dec.c
-	$(CC) -I $(INCLUDES) $(CFLAGS) matrix_dec.c
-
-matrix_enc.o : matrix_enc.c
-	$(CC) -I $(INCLUDES) $(CFLAGS) matrix_enc.c
-		
-clean:
-	-rm $(OBJS) libalac.a
+```text
+71eedc4958103f25c4efc4ee41844c5090229b74196316b04ef4e5d9be331a5b
 ```
 
-</details>
-  
-<details>
-<summary>
-Edit makefile.am as follow
-</summary>
-  
-```
-## Copyright (c) 2013 Tiancheng "Timothy" Gu
-## Modifications copyright (c) 2016 Mike Brady
-## Licensed under the Apache License, Version 2.0 (the "License");
-## you may not use this file except in compliance with the License.
-## You may obtain a copy of the License at
-## 
-##     http://www.apache.org/licenses/LICENSE-2.0
-## 
-## Unless required by applicable law or agreed to in writing, software
-## distributed under the License is distributed on an "AS IS" BASIS,
-## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-## See the License for the specific language governing permissions and
-## limitations under the License.
+Voir [docs/RELEASE_V9.23.md](docs/RELEASE_V9.23.md) pour les détails de cette version.
 
-lib_LTLIBRARIES = libalac.la
+## Installation Magisk
 
-libalac_la_CPPFLAGS = -Wno-multichar
-libalac_la_LDFLAGS = -version-info @ALAC_VERSION@
+1. Copier `tcl-airplay-v9.23-all-in-one-magisk.zip` sur le téléviseur.
+2. Ouvrir Magisk, choisir **Modules**, puis **Installer depuis le stockage**.
+3. Sélectionner l’archive et redémarrer le téléviseur.
+4. Vérifier que **TCL G03 Audio** et **TCL G03 Vidéo** apparaissent sur l’appareil Apple.
 
-libalac_la_SOURCES = \
-    EndianPortable.c \
-    ALACBitUtilities.c \
-    ALACDecoder.cpp \
-    ALACEncoder.cpp \
-    LibALAC.cpp \
-    ag_dec.c \
-    ag_enc.c \
-    dp_dec.c \
-    dp_enc.c \
-    matrix_dec.c \
-    matrix_enc.c
+Identifiant du module :
 
-pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = alac.pc
-
-# Install to include/alac
-alacincludedir = $(includedir)/alac
-
-# Install everything
-alacinclude_HEADERS = *.h
+```text
+tcl-airplay-hybrid-v8
 ```
 
-</details>
+En cas de problème au démarrage, supprimer le module depuis l’environnement de récupération ou avec ADB, puis redémarrer.
 
-Configure the build and make the library:  
-```
-$ autoreconf -fi
-$ ./configure
-$ make
-```
-  
-### Linux
-On terminal type the follow to install build tools  
-```
-apt-get install build-essential autoconf automake libtool
-```
-Add compiled DLL path into 'appsettings_linux.json' file.  
-  
-### MacOS
-On terminal type the follow to install build tools  
+## Construction Android
 
+Prérequis principaux : Android SDK, Android NDK et Java compatibles avec le projet.
+
+Construction de l’application TCL G03 :
+
+```bash
+./scripts/build-android-g03.sh
 ```
-brew install autoconf automake libtool
+
+Construction des codecs natifs ARMv7 :
+
+```bash
+./scripts/build-native-codecs-armv7.sh
 ```
-Add compiled DLL path into 'appsettings_osx.json' file.  
-  
-### Windows
 
-Use [this](http://www.gaia-gis.it/gaia-sins/mingw64_how_to.html#env) tutorial to understand how to install build tools and how to compile source code on Windows.  
-You need MinGW32 or MinGW64 based on arch.  
-  
-Put repo folders inside msys64 home folder ('C:\msys64\home\').  
-![homefolder](https://user-images.githubusercontent.com/11635557/116857182-b0b9b180-abfc-11eb-8e75-5d1b23d7541f.PNG)
-  
-Start an mingw32.exe or mingw64.exe shell based on arch and execute commands.  
-![mingwshell](https://user-images.githubusercontent.com/11635557/116857648-756bb280-abfd-11eb-8d6b-43d474f4a27b.PNG)
-  
-The compiled dll will be saved in 'C:\\msys64\\home\\username\\fdk-aac-master\\.libs\\'.  
-Add compiled DLL path into 'appsettings_win.json' file.  
-  
-TIP 1: If the ALAC library gives you an error during the compilation try to insert the following arguments in the 'makefile.am' file:
+Génération de l’archive Magisk hybride :
+
+```bash
+python3 scripts/build-hybrid-v8-magisk.py
 ```
-libalac_la_LDFLAGS = -version-info @ALAC_VERSION@ -no-undefined -static-libgcc -static-libstdc++
+
+Le script `scripts/patch-tcl-g03-player.py` applique les adaptations du lecteur TCL lorsque la base système correspond à la version attendue.
+
+## Architecture
+
+```text
+iPhone / iPad / Mac
+        │
+        ├── AirPlay audio ──► moteur SteeBono ──► AudioTrack
+        │
+        └── recopie H.264 ──► moteur SteeBono ──► MediaCodec Realtek
+                                                        │
+                                                        ▼
+                                             Surface TVInputService TCL
 ```
-TIP 2: If the error code 126 appears when loading the dll, try to import all the dlls located in the C:\msys64\bin\ folder into the bin folder of the project.  
-TIP 3: If the error code 193 appears when loading the dll, it means that you are trying to load a dll with the wrong architecture, so you have to compile the dll with the other mingwXX.exe.  
-   
-## Wiki
-  
-Here you will find an [Article](https://github.com/SteeBono/airplayreceiver/wiki/AirPlay2-Protocol) where I explain how the whole AirPlay 2 protocol works.
-  
-## Disclamier
-  
-All the resources in this repository are written using only opensource projects.  
-The code and related resources are meant for educational purposes only.  
-I do not take any responsibility for the use that will be made of it.    
 
-## Credits
+## Confidentialité
 
-Inspired by others AirPlay open source projects.  
-Big ty to OmgHax.c's author 😱. 
+Le récepteur traite les flux en mémoire pendant la session. L’adaptation n’a pas vocation à sauvegarder durablement la musique, la vidéo ou la recopie d’écran. Les clés privées de signature et les informations propres au téléviseur ne doivent pas être ajoutées au dépôt ni aux archives de publication.
 
-## If you want support me 🔥
+## Crédits et licence
 
-If you appreciate my work, consider buying me a cup of coffee to keep me recharged ☕
-  
-<a href="https://www.buymeacoffee.com/stfno.me" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/guidelines/download-assets-sm-3.svg" alt="Buy Me A Coffee" style="height: 41px !important;width: 174px !important;box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;-webkit-box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;" ></a>
-  
-... or ... crypto ...
-  
-BTC: 1BXhfC5U75G2H8b99wk5AedGFxtqJ6xf8q  
-BCH: 1BXhfC5U75G2H8b99wk5AedGFxtqJ6xf8q  
-ETH: 0x4Fc12c7C71C581aBc77945Ab9cFBA8DF9692b713 (ERC20)  
+Le moteur AirPlay d’origine est développé par [SteeBono](https://github.com/SteeBono/airplayreceiver). Les modifications de ce port sont distribuées avec les licences présentes dans le dépôt et dans l’archive de publication.
+
+AirPlay est une marque d’Apple Inc. TCL, Android et les autres marques citées appartiennent à leurs détenteurs respectifs. Ce projet communautaire n’est affilié ni à Apple ni à TCL.
