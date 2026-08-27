@@ -263,6 +263,8 @@ The application was compiled with .NET 8 for Android 34 and installed on the
 rooted Android TV 11 R51MT05/V652 test television. Android reports version 10.0,
 the foreground service runs, and TCP control ports 5000 and 7000 are reachable.
 The corresponding Magisk module is v10.0 (`versionCode=34`). Screen-mirroring
-rendering still needs a complete physical regression test.
+rendering still needs a complete physical regression test. Module activation,
+foreground-service restart and control ports 5000/7000 were verified after a
+full television reboot.
 
 Release notes: `docs/RELEASE_V10.0.md`.

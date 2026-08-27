@@ -41,7 +41,8 @@ SteeBono et l’intégration TCL `TVInputService`.
 - installation APK par mise à jour réussie avec la même signature que v9.23 ;
 - service au premier plan actif ;
 - ports TCP audio 5000 et vidéo 7000 accessibles ;
-- module Magisk v10.0 (`versionCode=34`) installé pour le prochain démarrage.
+- module Magisk v10.0 (`versionCode=34`) installé et actif après redémarrage ;
+- redémarrage automatique du service vérifié, avec retour des ports 5000 et 7000.
 
 ## Fichiers
 
