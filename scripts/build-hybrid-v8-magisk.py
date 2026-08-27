@@ -170,6 +170,11 @@ Current receiver features:
 Not included:
 - com.mediatek.airplaydaemon (the old proprietary engine)
 
+Experimental status / remaining work:
+- display issues remain and still need correction on the target TV
+- the combined TCL/SteeBono user interface is not finished yet
+- portrait, landscape, source switching and long sessions need more testing
+
 {integration}
 
 Module id: {MODULE_ID}

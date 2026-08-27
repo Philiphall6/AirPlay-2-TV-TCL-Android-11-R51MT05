@@ -4,6 +4,10 @@ Complete Magisk package for the TCL G03 Android 11 ARMv7 port. It preserves the
 TCL interface and TV input while replacing the unavailable proprietary daemon
 with the SteeBono receiver engine.
 
+> **Experimental release:** display problems still remain to be fixed, and the
+> combined TCL/SteeBono interface is not finished. More work is required for
+> reliable portrait/landscape rendering, source transitions and long sessions.
+
 ## Included
 
 - TCL AirPlay launcher and patched `TVInputService` player;
@@ -24,13 +28,16 @@ upgrades the existing module id `tcl_airplay_g08_g03_minsdk30`. Disable that
 module from Magisk if the target firmware is not a compatible TCL G03 Android
 11 ARMv7 build.
 
+Cette version reste expérimentale : des problèmes d'affichage sont encore à
+régler et l'interface doit également être terminée.
+
 ## Asset
 
 `tcl-airplay-v9.23-all-in-one-magisk.zip`
 
 SHA-256:
 
-`9e5fd6c2598b0d599848c5fe96b666df47644b69ab083ee6685f98655f8e5304`
+`71eedc4958103f25c4efc4ee41844c5090229b74196316b04ef4e5d9be331a5b`
 
 The matching `.sha256` file is intended to be attached next to the Release
 asset.

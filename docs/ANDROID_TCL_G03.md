@@ -242,3 +242,7 @@ The GitHub Release asset is built as
 patched player, Android engine 0.3.18, both ARMv7 audio codecs, boot service,
 SELinux permission merge, documentation and licenses in one Magisk archive.
 See `docs/RELEASE_V9.23.md` for the asset description and installation notes.
+
+v9.23 is experimental. Display issues remain to be solved and the integrated
+TCL/SteeBono interface is still incomplete; it must not be presented as a
+finished production release.
