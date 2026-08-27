@@ -1,4 +1,4 @@
-# TCL G03 AirPlay Receiver — portage Android ARMv7
+# AirPlay 2 TV TCL Android 11 R51MT05
 
 Portage expérimental du moteur open source [SteeBono/airplayreceiver](https://github.com/SteeBono/airplayreceiver) pour les téléviseurs TCL G03 sous Android TV.
 
