@@ -40,6 +40,15 @@ Fonctionnalités déjà intégrées :
 
 Cette mention décrit la configuration physique utilisée pendant les essais ; elle ne garantit pas encore le fonctionnement sur les autres firmwares ou plateformes TCL.
 
+### Capture sur la TV de test
+
+![Menu TCL R51MT05 montrant l’application AirPlay 2 TV TCL en haut et l’entrée système AirPlay sélectionnée en bas](docs/images/tcl-r51mt05-airplay-two-entries.png)
+
+Capture effectuée sur la TV `192.168.1.35` : l’application **AirPlay 2 TV TCL**
+est visible dans la rangée supérieure et l’entrée système **AirPlay** est
+sélectionnée dans le bandeau inférieur. Le pont v10 conserve cette tuile mais
+redirige son ouverture vers notre application.
+
 La documentation technique détaillée se trouve dans [docs/ANDROID_TCL_G03.md](docs/ANDROID_TCL_G03.md).
 
 ## Limitations connues
@@ -62,7 +71,13 @@ Elle contient :
 
 - le lanceur et l’intégration TV TCL ;
 - le lecteur SteeBono adapté à Android ;
-- l’application Android **10.0** (`versionCode 22`) avec la nouvelle interface ;
+- l’application Android **10.0** (`versionCode 24`) avec la nouvelle interface ;
+- la redirection de l’entrée système **AirPlay** du menu TCL vers l’application,
+  sans modifier le chemin `TVInputService` utilisé pendant la projection vidéo ;
+- le maintien du paquet TCL `com.tcl.airplay2` et de son récepteur comme
+  déclencheur de la tuile, la désactivation de son seul `BootupService` qui
+  génère l’erreur **904**, puis l’ouverture directe de la v10 par le pont root
+  lorsqu’il observe l’action `Show.Home.AirplayAPK` ;
 - le nom de récepteur personnalisable et ses suffixes fixes **Audio** et **Video** ;
 - les bibliothèques natives ARMv7 AAC et ALAC ;
 - le service de démarrage Magisk ;
@@ -72,7 +87,7 @@ Elle contient :
 SHA-256 de l’archive validée :
 
 ```text
-c772858f7a01f02bccd0c9eaf09d652a19afd44bfeedd71bcd5e8356ae013d07
+a6cbfae2fea9c7a57227ce529446031c94944ef2311cfb6e7b107c29e4b16f01
 ```
 
 Voir [docs/RELEASE_V10.0.md](docs/RELEASE_V10.0.md) pour les détails de cette version.

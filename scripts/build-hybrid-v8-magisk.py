@@ -120,13 +120,32 @@ ui_print "- Disable/remove this module in Magisk if boot issues occur"
 ui_print " "
 set_perm_recursive "$MODPATH" 0 0 0755 0644
 set_perm "$MODPATH/service.sh" 0 0 0755
+set_perm "$MODPATH/tcl-system-tile-bridge.sh" 0 0 0755
 """
 
     service = """#!/system/bin/sh
+MODDIR="${0%/*}"
 until [ "$(getprop sys.boot_completed)" = "1" ]; do
   sleep 2
 done
 sleep 30
+bridge_service="com.philphall.tclairplayreceiver/.TclAirPlayTileAccessibilityService"
+enabled_services="$(settings get secure enabled_accessibility_services)"
+case ":${enabled_services}:" in
+  *":${bridge_service}:"*) ;;
+  *)
+    if [ -z "${enabled_services}" ] || [ "${enabled_services}" = "null" ]; then
+      settings put secure enabled_accessibility_services "${bridge_service}"
+    else
+      settings put secure enabled_accessibility_services "${enabled_services}:${bridge_service}"
+    fi
+    ;;
+esac
+settings put secure accessibility_enabled 1
+pm enable --user 0 com.tcl.airplay2 >/dev/null 2>&1
+pm enable com.tcl.airplay2/com.mediatek.partner.airplay.BootupReceiver >/dev/null 2>&1
+pm disable com.tcl.airplay2/com.mediatek.partner.airplay.BootupService >/dev/null 2>&1
+"$MODDIR/tcl-system-tile-bridge.sh" >/dev/null 2>&1 &
 am start --user 0 -n com.philphall.tclairplayreceiver/com.philphall.tclairplayreceiver.BootstrapActivity >/dev/null 2>&1
 """
 
@@ -164,6 +183,11 @@ Current receiver features:
 - H.264 mirroring through the Realtek hardware MediaCodec decoder
 - exact mirroring TCP framing, multi-NAL access units and IDR/SPS/PPS recovery
 - direct TCL TVInputService Surface bridge with centered portrait/landscape ratio
+- TCL system AirPlay source opens the v10 application outside video sessions
+- the original TCL receiver remains enabled as the system tile trigger
+- only the legacy BootupService is disabled to prevent the error 904 dialog
+- the root log bridge recognizes Show.Home.AirplayAPK and opens v10 directly
+- an accessibility bridge remains available as a fallback
 - delayed aspect transform so the Realtek decoder starts on a full-size buffer
 - one-shot TCL source switching per session to keep the direct player visible
 - no persistent media recording or H.264/audio dump
@@ -194,6 +218,12 @@ Input SHA-256:
         add_text(archive, module_prop, "module.prop")
         add_text(archive, customize, "customize.sh", 0o755)
         add_text(archive, service, "service.sh", 0o755)
+        add_file(
+            archive,
+            Path(__file__).with_name("tcl-system-tile-bridge.sh"),
+            "tcl-system-tile-bridge.sh",
+            0o755,
+        )
         add_text(archive, readme, "README-HYBRID.txt")
         add_file(
             archive,

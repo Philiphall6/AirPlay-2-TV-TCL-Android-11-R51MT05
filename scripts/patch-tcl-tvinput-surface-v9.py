@@ -206,6 +206,44 @@ TV_ACTIVITY_ASPECT_METHOD = r'''
 .end method
 '''
 
+TV_ACTIVITY_MENU_ROUTE = r'''
+    invoke-virtual {p0}, Landroid/app/Activity;->getIntent()Landroid/content/Intent;
+
+    move-result-object v0
+
+    const-string v1, "com.philphall.tclairplayreceiver.STEEBONO_VIDEO"
+
+    const/4 v2, 0x0
+
+    invoke-virtual {v0, v1, v2}, Landroid/content/Intent;->getBooleanExtra(Ljava/lang/String;Z)Z
+
+    move-result v0
+
+    if-nez v0, :steebono_video_entry
+
+    new-instance v0, Landroid/content/Intent;
+
+    invoke-direct {v0}, Landroid/content/Intent;-><init>()V
+
+    const-string v1, "com.philphall.tclairplayreceiver"
+
+    const-string v2, "com.philphall.tclairplayreceiver.MainActivity"
+
+    invoke-virtual {v0, v1, v2}, Landroid/content/Intent;->setClassName(Ljava/lang/String;Ljava/lang/String;)Landroid/content/Intent;
+
+    const/high16 v1, 0x10000000
+
+    invoke-virtual {v0, v1}, Landroid/content/Intent;->addFlags(I)Landroid/content/Intent;
+
+    invoke-virtual {p0, v0}, Landroid/content/Context;->startActivity(Landroid/content/Intent;)V
+
+    invoke-virtual {p0}, Landroid/app/Activity;->finish()V
+
+    return-void
+
+    :steebono_video_entry
+'''
+
 GEOMETRY_RECEIVER = r'''.class public Lcom/mediatek/AirplayAPK/SteeBonoGeometryReceiver;
 .super Landroid/content/BroadcastReceiver;
 .source "SteeBonoGeometryReceiver.java"
@@ -318,6 +356,30 @@ def add_geometry_bridge(decoded: Path) -> None:
     manifest_path.write_text(manifest, encoding="utf-8")
 
 
+def add_tcl_menu_route(decoded: Path) -> None:
+    """Route a manual TCL AirPlay source selection to the v10 application.
+
+    SteeBono's own video launch carries STEEBONO_VIDEO=true and therefore keeps
+    the retained TVInput activity and Surface bridge unchanged.
+    """
+    activity_path = decoded / TV_ACTIVITY_SMALI
+    activity = activity_path.read_text(encoding="utf-8")
+    if "com.philphall.tclairplayreceiver.STEEBONO_VIDEO" in activity:
+        return
+    on_create_super = (
+        "    invoke-super {p0, p1}, "
+        "Landroidx/fragment/app/FragmentActivity;->onCreate(Landroid/os/Bundle;)V\n"
+    )
+    if on_create_super not in activity:
+        raise SystemExit(f"TVActivity onCreate marker not found in {activity_path}")
+    activity = activity.replace(
+        on_create_super,
+        on_create_super + "\n" + TV_ACTIVITY_MENU_ROUTE.strip("\n") + "\n",
+        1,
+    )
+    activity_path.write_text(activity, encoding="utf-8")
+
+
 def sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as stream:
@@ -375,6 +437,7 @@ def main() -> None:
         CREATE_SESSION_METHOD,
     )
     add_geometry_bridge(decoded)
+    add_tcl_menu_route(decoded)
     run(str(args.java), "-jar", str(args.apktool), "b", "-o", str(unsigned), str(decoded))
     run(str(args.zipalign), "-p", "-f", "4", str(unsigned), str(aligned))
     if args.key.read_bytes().startswith(b"-----BEGIN"):

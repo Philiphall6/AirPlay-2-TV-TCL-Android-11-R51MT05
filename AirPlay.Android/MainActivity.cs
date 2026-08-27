@@ -13,6 +13,7 @@ using Android.Widget;
 namespace AirPlay.Android;
 
 [Activity(
+    Name = "com.philphall.tclairplayreceiver.MainActivity",
     Label = "AirPlay 2 TV TCL",
     Theme = "@android:style/Theme.Material.NoActionBar",
     MainLauncher = true,

@@ -253,6 +253,7 @@ public sealed class AirPlayForegroundService : Service
                 "com.mediatek.AirplayAPK%2F.AirPlayTvInputService");
             var intent = new Intent(Intent.ActionView, channel);
             intent.SetClassName("com.mediatek.AirplayAPK", "com.mediatek.activity.TVActivity");
+            intent.PutExtra("com.philphall.tclairplayreceiver.STEEBONO_VIDEO", true);
             intent.AddFlags(ActivityFlags.NewTask | ActivityFlags.ClearTop);
             StartActivity(intent);
             global::Android.Util.Log.Info("TclAirPlay", "Demande d'ouverture du TVInputService TCL");

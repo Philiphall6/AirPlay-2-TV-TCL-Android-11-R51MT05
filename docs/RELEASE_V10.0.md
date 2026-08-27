@@ -9,7 +9,15 @@ SteeBono et l’intégration TCL `TVInputService`.
 
 ## Nouveautés v10.0
 
-- application Android `10.0` (`versionCode=22`) ;
+- application Android `10.0` (`versionCode=24`) ;
+- l’entrée système AirPlay du menu TCL ouvre directement l’application v10.0
+  grâce au pont d’accessibilité ;
+- le paquet TCL `com.tcl.airplay2` et son `BootupReceiver` restent actifs afin
+  que la tuile fonctionne ; seul son ancien `BootupService`, responsable de la
+  boîte 904, est désactivé, et le pont root ouvre directement la v10 dès que le
+  `BootupReceiver` journalise `Show.Home.AirplayAPK` ;
+- le lancement vidéo interne reste séparé grâce au marqueur `STEEBONO_VIDEO`,
+  afin de conserver le pont `TVInputService` pendant une recopie d’écran ;
 - interface sombre inspirée d’Apple TV, sans barre de titre Android ;
 - symbole AirPlay blanc et icône du petit robot croquant une pomme ;
 - commandes et états de focus adaptés à la télécommande ;
@@ -41,7 +49,7 @@ SteeBono et l’intégration TCL `TVInputService`.
 - installation APK par mise à jour réussie avec la même signature que v9.23 ;
 - service au premier plan actif ;
 - ports TCP audio 5000 et vidéo 7000 accessibles ;
-- module Magisk v10.0 (`versionCode=34`) installé et actif après redémarrage ;
+- module Magisk v10.0 (`versionCode=36`) installé comme mise à jour persistante ;
 - redémarrage automatique du service vérifié, avec retour des ports 5000 et 7000.
 
 ## Fichiers
@@ -52,7 +60,7 @@ SteeBono et l’intégration TCL `TVInputService`.
 
 SHA-256 :
 
-`c772858f7a01f02bccd0c9eaf09d652a19afd44bfeedd71bcd5e8356ae013d07`
+`a6cbfae2fea9c7a57227ce529446031c94944ef2311cfb6e7b107c29e4b16f01`
 
 ### APK Android ARMv7
 
@@ -60,7 +68,7 @@ SHA-256 :
 
 SHA-256 :
 
-`5c7d3c6f98e66f6942fb6e71cad116e9276787f4aeb3b9efe24a89300fca5599`
+`ae356d4cc5c555f9def32c7bd3d562a6ebcc7fafcff5a5e41e3edf47d21e5727`
 
 ## Installation
 

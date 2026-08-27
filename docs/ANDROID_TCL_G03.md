@@ -253,7 +253,7 @@ finished production release.
 
 ## Version 10.0
 
-The v10.0 Android application (`versionCode=22`) adds the new dark TV interface,
+The v10.0 Android application (`versionCode=24`) adds the new dark TV interface,
 the AirPlay symbol, remote-focus states and a locally persisted receiver base
 name. The advertised names always retain the fixed `Audio` and `Video` suffixes.
 Saving the name restarts the foreground receiver so the new mDNS records are
@@ -262,7 +262,18 @@ published without rebooting the television.
 The application was compiled with .NET 8 for Android 34 and installed on the
 rooted Android TV 11 R51MT05/V652 test television. Android reports version 10.0,
 the foreground service runs, and TCP control ports 5000 and 7000 are reachable.
-The corresponding Magisk module is v10.0 (`versionCode=34`). Screen-mirroring
+The TCL system AirPlay source now routes manual selections to the stable v10
+`MainActivity`. Internal mirroring launches carry `STEEBONO_VIDEO=true` and
+continue through the retained MediaTek `TVInputService`, avoiding the TCL 904
+error without replacing the direct video Surface path.
+
+The corresponding Magisk module is v10.0 (`versionCode=36`). The boot service
+enables `TclAirPlayTileAccessibilityService` while preserving existing enabled
+accessibility services. The `com.tcl.airplay2` package and its `BootupReceiver`
+remain enabled because the TCL tile needs both. Only its legacy `BootupService`,
+which creates the error 904 dialog, is disabled. The accessibility bridge
+remains available as a fallback, while the Magisk root bridge watches the exact
+`Show.Home.AirplayAPK` receiver event and opens v10 directly. Screen-mirroring
 rendering still needs a complete physical regression test. Module activation,
 foreground-service restart and control ports 5000/7000 were verified after a
 full television reboot.
