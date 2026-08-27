@@ -250,3 +250,19 @@ See `docs/RELEASE_V9.23.md` for the asset description and installation notes.
 v9.23 is experimental. Display issues remain to be solved and the integrated
 TCL/SteeBono interface is still incomplete; it must not be presented as a
 finished production release.
+
+## Version 10.0
+
+The v10.0 Android application (`versionCode=22`) adds the new dark TV interface,
+the AirPlay symbol, remote-focus states and a locally persisted receiver base
+name. The advertised names always retain the fixed `Audio` and `Video` suffixes.
+Saving the name restarts the foreground receiver so the new mDNS records are
+published without rebooting the television.
+
+The application was compiled with .NET 8 for Android 34 and installed on the
+rooted Android TV 11 R51MT05/V652 test television. Android reports version 10.0,
+the foreground service runs, and TCP control ports 5000 and 7000 are reachable.
+The corresponding Magisk module is v10.0 (`versionCode=34`). Screen-mirroring
+rendering still needs a complete physical regression test.
+
+Release notes: `docs/RELEASE_V10.0.md`.

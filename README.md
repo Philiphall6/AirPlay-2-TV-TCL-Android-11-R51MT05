@@ -9,7 +9,7 @@ Portage expérimental du moteur open source [SteeBono/airplayreceiver](https://g
 L’objectif est de conserver l’interface TCL et d’utiliser le moteur SteeBono pour la réception AirPlay audio et la recopie d’écran, avec une intégration directe à `TVInputService`.
 
 > [!WARNING]
-> La version **v9.23 reste expérimentale**. L’audio fonctionne lors des essais actuels, mais des problèmes d’affichage restent à corriger. L’interface TCL/SteeBono doit également être terminée.
+> La version **v10.0 reste expérimentale**. L’application et le service démarrent sur le téléviseur de test, mais les problèmes d’affichage de la recopie vidéo restent à corriger et à valider en conditions réelles.
 
 ## État actuel
 
@@ -48,21 +48,22 @@ La documentation technique détaillée se trouve dans [docs/ANDROID_TCL_G03.md](
 - certaines activités système TCL peuvent masquer ou remplacer la surface vidéo ;
 - les changements portrait/paysage et les reconnexions doivent encore être fiabilisés ;
 - les sessions longues et les changements de source demandent davantage de tests ;
-- l’interface utilisateur n’est pas terminée ;
+- l’interface v10.0 est fonctionnelle et affichée sur la TV de test, mais son utilisation prolongée à la télécommande doit encore être validée ;
 - le module cible précisément la configuration TCL Android TV 11 R51MT05 rootée, sous firmware V652 et en ARMv7, utilisée pour les essais ;
 - ce projet n’est pas encore une solution AirPlay 2 certifiée ou universelle.
 
-## Version v9.23 tout compris
+## Version v10.0 tout compris
 
 L’archive prête à installer est :
 
-`tcl-airplay-v9.23-all-in-one-magisk.zip`
+`tcl-airplay-v10.0-all-in-one-magisk.zip`
 
 Elle contient :
 
 - le lanceur et l’intégration TV TCL ;
 - le lecteur SteeBono adapté à Android ;
-- l’application Android AirPlay Receiver 0.3.18 (`versionCode 21`) ;
+- l’application Android **10.0** (`versionCode 22`) avec la nouvelle interface ;
+- le nom de récepteur personnalisable et ses suffixes fixes **Audio** et **Video** ;
 - les bibliothèques natives ARMv7 AAC et ALAC ;
 - le service de démarrage Magisk ;
 - les scripts d’installation et de désinstallation ;
@@ -71,22 +72,22 @@ Elle contient :
 SHA-256 de l’archive validée :
 
 ```text
-71eedc4958103f25c4efc4ee41844c5090229b74196316b04ef4e5d9be331a5b
+c772858f7a01f02bccd0c9eaf09d652a19afd44bfeedd71bcd5e8356ae013d07
 ```
 
-Voir [docs/RELEASE_V9.23.md](docs/RELEASE_V9.23.md) pour les détails de cette version.
+Voir [docs/RELEASE_V10.0.md](docs/RELEASE_V10.0.md) pour les détails de cette version.
 
 ## Installation Magisk
 
-1. Copier `tcl-airplay-v9.23-all-in-one-magisk.zip` sur le téléviseur.
+1. Copier `tcl-airplay-v10.0-all-in-one-magisk.zip` sur le téléviseur.
 2. Ouvrir Magisk, choisir **Modules**, puis **Installer depuis le stockage**.
 3. Sélectionner l’archive et redémarrer le téléviseur.
-4. Vérifier que **TCL G03 Audio** et **TCL G03 Vidéo** apparaissent sur l’appareil Apple.
+4. Vérifier que **TCL G03 Audio** et **TCL G03 Video** apparaissent sur l’appareil Apple, ou les deux noms dérivés du nom personnalisé.
 
 Identifiant du module :
 
 ```text
-tcl-airplay-hybrid-v8
+tcl_airplay_g08_g03_minsdk30
 ```
 
 En cas de problème au démarrage, supprimer le module depuis l’environnement de récupération ou avec ADB, puis redémarrer.

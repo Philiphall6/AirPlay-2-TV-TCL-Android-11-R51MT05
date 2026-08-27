@@ -158,7 +158,8 @@ Replacement engine:
 - compatibility receiver for TCL start, restart and stop broadcasts
 
 Current receiver features:
-- separate TCL G03 Audio and TCL G03 Video AirPlay destinations
+- configurable receiver base name with fixed Audio and Video destinations
+- Apple TV-inspired interface, AirPlay symbol and custom Android application icon
 - PCM, AAC/AAC-ELD and ALAC audio through Android AudioTrack
 - H.264 mirroring through the Realtek hardware MediaCodec decoder
 - exact mirroring TCP framing, multi-NAL access units and IDR/SPS/PPS recovery
@@ -172,7 +173,7 @@ Not included:
 
 Experimental status / remaining work:
 - display issues remain and still need correction on the target TV
-- the combined TCL/SteeBono user interface is not finished yet
+- the new settings interface still requires validation on the target TV
 - portrait, landscape, source switching and long sessions need more testing
 
 {integration}

@@ -14,6 +14,7 @@ namespace AirPlay.Android;
 
 [Activity(
     Label = "AirPlay 2 TV TCL",
+    Theme = "@android:style/Theme.Material.NoActionBar",
     MainLauncher = true,
     Exported = true,
     ScreenOrientation = ScreenOrientation.Landscape,
@@ -36,6 +37,7 @@ public sealed class MainActivity : Activity, ISurfaceHolderCallback
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
+        Window?.SetSoftInputMode(SoftInput.StateAlwaysHidden);
         _restartHandler = new Handler(Looper.MainLooper!);
 
         var frame = new FrameLayout(this);
@@ -73,9 +75,9 @@ public sealed class MainActivity : Activity, ISurfaceHolderCallback
     {
         var header = new LinearLayout(this)
         {
-            Orientation = Orientation.Horizontal,
-            Gravity = GravityFlags.CenterVertical
+            Orientation = Orientation.Horizontal
         };
+        header.SetGravity(GravityFlags.CenterVertical);
 
         var logo = new ImageView(this)
         {
@@ -116,9 +118,9 @@ public sealed class MainActivity : Activity, ISurfaceHolderCallback
 
         var nameRow = new LinearLayout(this)
         {
-            Orientation = Orientation.Horizontal,
-            Gravity = GravityFlags.CenterVertical
+            Orientation = Orientation.Horizontal
         };
+        nameRow.SetGravity(GravityFlags.CenterVertical);
         var baseName = ReceiverNameSettings.GetBaseName(this);
         _receiverName = new EditText(this)
         {
@@ -153,9 +155,9 @@ public sealed class MainActivity : Activity, ISurfaceHolderCallback
 
         var controls = new LinearLayout(this)
         {
-            Orientation = Orientation.Horizontal,
-            Gravity = GravityFlags.Right
+            Orientation = Orientation.Horizontal
         };
+        controls.SetGravity(GravityFlags.Right);
         var start = CreateButton("Démarrer AirPlay", true);
         var stop = CreateButton("Arrêter", false);
         start.Click += (_, _) => StartReceiver();
@@ -166,6 +168,7 @@ public sealed class MainActivity : Activity, ISurfaceHolderCallback
         });
         controls.AddView(stop, new LinearLayout.LayoutParams(Dp(140), Dp(54)));
         panel.AddView(controls, MatchWidthWithTopMargin(Dp(18)));
+        start.RequestFocus();
 
         return panel;
     }
