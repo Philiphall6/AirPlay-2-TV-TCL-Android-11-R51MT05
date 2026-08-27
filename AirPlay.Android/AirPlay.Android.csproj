@@ -5,7 +5,7 @@
     <SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>
     <AndroidMinSdkVersion>30</AndroidMinSdkVersion>
     <ApplicationId>com.philphall.tclairplayreceiver</ApplicationId>
-    <ApplicationTitle>TCL AirPlay Receiver</ApplicationTitle>
+    <ApplicationTitle>AirPlay 2 TV TCL</ApplicationTitle>
     <ApplicationVersion>21</ApplicationVersion>
     <ApplicationDisplayVersion>0.3.18</ApplicationDisplayVersion>
     <AndroidPackageFormat>apk</AndroidPackageFormat>

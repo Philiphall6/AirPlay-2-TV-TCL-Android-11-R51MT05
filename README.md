@@ -15,7 +15,9 @@ L’objectif est de conserver l’interface TCL et d’utiliser le moteur SteeBo
 
 Fonctionnalités déjà intégrées :
 
-- deux récepteurs mDNS séparés : **TCL G03 Audio** et **TCL G03 Vidéo** ;
+- deux récepteurs mDNS séparés : **TCL G03 Audio** et **TCL G03 Video** par défaut ;
+- interface sombre inspirée d’Apple TV avec symbole AirPlay et navigation adaptée à la télécommande ;
+- nom de base personnalisable, mémorisé localement, avec suffixes fixes **Audio** et **Video** ;
 - réception audio PCM, AAC, AAC-ELD et ALAC ;
 - bibliothèques natives ARMv7 `libfdk-aac.so` et `libalac.so` ;
 - sortie audio Android par `AudioTrack` ;
@@ -128,7 +130,7 @@ iPhone / iPad / Mac
 
 ## Confidentialité
 
-Le récepteur traite les flux en mémoire pendant la session. L’adaptation n’a pas vocation à sauvegarder durablement la musique, la vidéo ou la recopie d’écran. Les clés privées de signature et les informations propres au téléviseur ne doivent pas être ajoutées au dépôt ni aux archives de publication.
+Le récepteur traite les flux en mémoire pendant la session. L’adaptation n’a pas vocation à sauvegarder durablement la musique, la vidéo ou la recopie d’écran. Seuls les réglages de l’application, notamment le nom choisi pour le récepteur, sont conservés localement. Les clés privées de signature et les informations propres au téléviseur ne doivent pas être ajoutées au dépôt ni aux archives de publication.
 
 ## Crédits et licence
 

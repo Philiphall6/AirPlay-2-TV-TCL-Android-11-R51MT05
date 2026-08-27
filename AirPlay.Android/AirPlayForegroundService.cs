@@ -71,11 +71,14 @@ public sealed class AirPlayForegroundService : Service
             }
 
             var deviceMac = FindMacAddress();
+            var baseName = ReceiverNameSettings.GetBaseName(this);
+            var audioName = ReceiverNameSettings.AudioName(baseName);
+            var videoName = ReceiverNameSettings.VideoName(baseName);
             var receiverConfig = Options.Create(new AirPlayReceiverConfig
             {
-                Instance = "TCL G03",
-                AudioInstance = "TCL G03 Audio",
-                VideoInstance = "TCL G03 Vidéo",
+                Instance = baseName,
+                AudioInstance = audioName,
+                VideoInstance = videoName,
                 AirTunesPort = 5000,
                 AirPlayPort = 7000,
                 AirPlayDataPort = 7100,
@@ -106,8 +109,8 @@ public sealed class AirPlayForegroundService : Service
 
             await _receiver.StartListeners(cancellationToken).ConfigureAwait(false);
             await _receiver.StartMdnsAsync().ConfigureAwait(false);
-            ReceiverStatus.Publish("Actif : Audio 5000 + Vidéo 7000 (H.264 7100)");
-            UpdateNotification("Récepteur actif");
+            ReceiverStatus.Publish($"Actif : {audioName} · {videoName}");
+            UpdateNotification($"{baseName} actif");
             NotifyLegacyTclReady();
         }
         catch (Exception exception)
@@ -168,7 +171,7 @@ public sealed class AirPlayForegroundService : Service
         var manager = (NotificationManager?)GetSystemService(NotificationService);
         manager?.CreateNotificationChannel(new NotificationChannel(
             ChannelId,
-            "TCL AirPlay Receiver",
+            "AirPlay 2 TV TCL",
             NotificationImportance.Low));
     }
 
@@ -181,7 +184,7 @@ public sealed class AirPlayForegroundService : Service
             launchIntent,
             PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable);
         return new Notification.Builder(this, ChannelId)
-            .SetContentTitle("TCL AirPlay Receiver")
+            .SetContentTitle("AirPlay 2 TV TCL")
             .SetContentText(text)
             .SetSmallIcon(global::Android.Resource.Drawable.IcMediaPlay)
             .SetContentIntent(pending)

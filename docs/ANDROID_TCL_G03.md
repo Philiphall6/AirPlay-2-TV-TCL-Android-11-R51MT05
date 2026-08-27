@@ -23,6 +23,8 @@ Upstream baseline:
 
 ## Added Android integration
 
+- Apple TV-inspired dark interface with an AirPlay symbol and TV-remote focus states;
+- locally persisted receiver base name with non-editable `Audio` and `Video` suffixes;
 - foreground service with a persistent notification;
 - boot receiver;
 - Wi-Fi multicast lock for `_airplay._tcp` and `_raop._tcp` advertisements;
